@@ -36,14 +36,11 @@ contract("Token", async function(accounts) {
     it("should activate frozen tokens by owner transaction");
     it("should fail to activate frozen tokens by non-owner transaction");
 
-    it("should store paid amount by every address");
-    it("should increment paid amount by ever ")
-
     it("should store KYC and AML addresses");
     it("should add KYC entry by owner transaction");
-    it("should not add KYC entry by non-owner transaction");
+    it("should fail to add KYC entry by non-owner transaction");
     it("should add AML entry by owner transaction");
-    it("should not add AML entry by non-owner transaction");
+    it("should fail to add AML entry by non-owner transaction");
 });
 
 contract("ICO", async function(accounts) {
