@@ -1,12 +1,18 @@
 contract("Token", async function(accounts) {
     it("should be ERC20 compatible");
     it("should be zeppelin audited");
-    it("should be controlled by ICO");
 
-    it("should start with correct params");
-    it("should start with totalSupply of 0");
-    it("should start with disabled transfers");
-    it("should start with enabled minting");
+    describe("Construction", function() {
+        it("should be created with constructor params");
+        it("should be controlled by ICO");
+        it("should have token supply of 0");
+        it("should enable minting");
+        it("should disable transfers");
+        it("should store KYC");
+        it("should store AML");
+        it("should store tokens");
+        it("should store frozen tokens");
+    });
 
     it("should not accept payments");
 
@@ -20,7 +26,7 @@ contract("Token", async function(accounts) {
     it("should fail to transfer more tokens than balance");
 
     it("should transfer tokens from another account when transfers are enabled");
-    it("should not transfer tokens from another account when transfer are disabled");
+    it("should fail to transfer tokens from another account when transfer are disabled");
     it("should fail to transfer more tokens than allowed");
 
     it("should approve allowance when transfers are enabled");
@@ -32,15 +38,13 @@ contract("Token", async function(accounts) {
     it("should finish minting by owner transaction");
     it("should not finish minting by non-owner transaction");
 
-    it("should store frozen and confirmed tokens");
     it("should activate frozen tokens by owner transaction");
     it("should fail to activate frozen tokens by non-owner transaction");
 
-    it("should store KYC and AML addresses");
     it("should add KYC entry by owner transaction");
     it("should fail to add KYC entry by non-owner transaction");
     it("should add AML entry by owner transaction");
-    it("should fail to add AML entry by non-owner transaction");
+    it("should fail to add AMK entry by non-owner transaction");
 });
 
 contract("ICO", async function(accounts) {
