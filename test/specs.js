@@ -3,7 +3,7 @@ contract("Token", async function(accounts) {
     it("should be zeppelin audited");
     it("should be controlled by ICO");
 
-    it("should start with constructor params");
+    it("should start with correct params");
     it("should start with totalSupply of 0");
     it("should start with disabled transfers");
     it("should start with enabled minting");
@@ -48,7 +48,7 @@ contract("ICO", async function(accounts) {
     it("should be zeppelin audited");
     it("should be controlled by KOWN");
 
-    it("should start with constructor params");
+    it("should start with correct params");
     it("should have link to official document");
     it("should own token");
 
