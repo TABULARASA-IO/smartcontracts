@@ -1,5 +1,4 @@
 const Token = artifacts.require('./Token.sol');
-const Crowdsale = artifacts.require('./Crowdsale.sol');
 
 const BigNumber = web3.BigNumber;
 const chai = require('chai');
@@ -11,13 +10,14 @@ const h = require('../scripts/helper_functions.js');
 const ether = h.ether;
 const getBalance = h.getBalance;
 const expectInvalidOpcode = h.expectInvalidOpcode;
+const inBaseUnits = h.inBaseUnits(18);
 
 contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     let token;
 
     const investment = ether(1);
-    const limitBeforeAML = h.inBaseUnits(3);
-    const units = h.inBaseUnits(1);
+    const limitBeforeAML = inBaseUnits(3);
+    const units = inBaseUnits(1);
     const unitsOverAML = limitBeforeAML + 1;
 
     beforeEach(async function() {

@@ -2,64 +2,7 @@ let chai = require('chai');
 var chaiAsPromised = require('chai-as-promised');
 const assert = chai.assert;
 const expect = chai.expect;
-chai.should();
 chai.use(chaiAsPromised);
-
-
-const waitUntilTransactionsMined = (txn_hashes) => {
-    var transactionReceiptAsync;
-    const interval = 500;
-    transactionReceiptAsync = function(txn_hashes, resolve, reject) {
-        try {
-            var receipt = web3.eth.getTransactionReceipt(txn_hashes);
-            if (receipt == null) {
-                setTimeout(function () {
-                    transactionReceiptAsync(txn_hashes, resolve, reject);
-                }, interval);
-            } else {
-                resolve(receipt);
-            }
-        } catch(e) {
-            reject(e);
-        }
-    };
-    
-    if (Array.isArray(txn_hashes)) {
-        var promises = [];
-        txn_hashes.forEach(function (tx_hash) {
-            promises.push(waitUntilTransactionsMined(tx_hash));
-        });
-        return Promise.all(promises);
-    } 
-    else {
-        return new Promise(function (resolve, reject) {transactionReceiptAsync(txn_hashes, resolve, reject);});
-    }
-}
-
-const transferOwnership = async (crowdsale, sender, receiver) => {
-    tx = await crowdsale.transferOwnership(receiver, {from: sender, gas: 100000});
-    await waitUntilTransactionsMined(tx.tx);
-    
-}
-
-const setContactInformation = async(crowdsale, sender, message) => {
-    tx = await crowdsale.setContactInformation(message, {from: sender, gas: 1000000});
-    await waitUntilTransactionsMined(tx.tx);
-}
-
-const getContactInformation = async(crowdsale, sender) => {
-    return await crowdsale.contactInformation.call();
-}
-
-const pause = async(contract, sender) => {
-    tx = await contract.pause({from: sender, gas: 1000000});
-    await waitUntilTransactionsMined(tx.tx);
-}
-
-const unpause = async(contract, sender) => {
-    tx = await contract.unpause({from :sender, gas: 1000000});
-    await waitUntilTransactionsMined(tx.tx);
-}
 
 const expectInvalidOpcode = async (promise) => {
     try {
@@ -98,49 +41,6 @@ const ether = (amount) => {
     return new web3.BigNumber(web3.toWei(amount, 'ether')).toString();
 }
 
-const makeTransaction = async (tx_obj) => {
-    let tx_hash = await web3.eth.sendTransaction(tx_obj)
-    return tx_hash
-}
-
-const makeTransactions = async (txns) => {
-
-    let txn_hashes = [];
-
-    for (let txn of txns) {
-        txn_hash = await makeTransaction(txn);
-        txn_hashes.push(txn_hash);
-    }
-
-    return txn_hashes;
-    
-}
-
-
-const getTotalRaised = async (crowdsale) => {
-    let totalRaised = await crowdsale.weiRaised.call();
-    console.log(`The total amount of ether raised is ${inEther(totalRaised)}`);
-}
-
-const getTokenTotalSupply = async (token) => {
-    let totalSupply = await token.totalSupply.call();
-    return inEther(totalSupply.toString());
-}
-
-const getTokenBalance = async (token, address) => {
-    let balance = await token.balanceOf(address);
-    return balance;
-}
-
-const getTokenDistribution = async(token, investors) => {
-
-    const promises = investors.map(async (address) => {
-        return { address: address, balance: await getTokenBalance(token, address) };
-    });
-
-    return Promise.all(promises);
-}
-
 const getBalance = (address) => {
     return web3.fromWei(web3.eth.getBalance(address).toString(), 'ether');
 }
@@ -153,51 +53,64 @@ const inWei = (amountInEther) => {
     return web3.toWei(amountInEther, 'ether');
 }
 
-const tokenWei = (amountInTokens) => {
-    return amountInTokens * (10 ** 18);
+const tokenWei = (decimals) => (amountInTokens) => {
+    return amountInTokens * (10 ** decimals);
 }
 
-const inBaseUnits = (tokens) => {
-    return tokens * (10 ** 18);
+const inBaseUnits = (decimals) => (tokens) => {
+    return tokens * (10 ** decimals);
 }
 
-const inTokenUnits = (tokenBaseUnits) => {
-    return tokenBaseUnits / (10 * 18);
+const inTokenUnits = (decimals) => (tokenBaseUnits) => {
+    return tokenBaseUnits / (10 * decimals);
 }
 
-const equivalentTokenBaseUnits = (wei) => {
-    let rate = 20;
+const equivalentTokenBaseUnits = (rate) => (wei) => {
     return rate * wei;
 }
 
-const equivalentTokenUnits = (wei) => {
-    let rate = 20;
-    return rate * wei / (10 ** 18);
+const equivalentTokenUnits = (decimals) => (rate) => (wei) => {
+    return rate * wei / (10 ** decimals);
 }
 
+const latestTime = () => web3.eth.getBlock('latest').timestamp;
 
+const increaseTime = (duration) => {
+    const id = Date.now();
+
+    return new Promise((resolve, reject) => {
+        web3.currentProvider.sendAsync({
+            jsonrpc: '2.0',
+            method: 'evm_increaseTime',
+            params: [duration],
+            id
+        }, err => {
+            if(err) return reject(err);
+
+            web3.currentProvider.sendAsync({
+                jsonrpc: '2.0',
+                method: 'evm_mine',
+                id: id+1
+            }, (err, res) => {
+                if(err) return reject(err);
+                resolve(res);
+            })
+        })
+    })
+}
 
 module.exports = {
-    waitUntilTransactionsMined,
-    transferOwnership,
     expectInvalidOpcode,
     expectInvalidJump,
     expectOutOfGas,
-    setContactInformation,
-    getContactInformation,
-    pause,
-    unpause,
     ether,
     getBalance,
-    getTokenBalance,
-    getTotalRaised,
-    makeTransaction,
-    makeTransactions,
     inEther,
     inWei,
-    getTokenBalance,
     equivalentTokenBaseUnits,
     equivalentTokenUnits,
     inBaseUnits,
-    inTokenUnits
+    inTokenUnits,
+    latestTime,
+    increaseTime
 }
