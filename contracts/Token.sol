@@ -7,31 +7,33 @@ contract Token is MintableToken {
   string public constant symbol = "GLT";
   uint8 public constant decimals = 18;
 
-  mapping (address => uint256) frozenBalances;
-  mapping (address => uint256) supply;
+  mapping (address => uint256) public frozenBalances;
+  mapping (address => uint256) public supply;
 
-  mapping (address => bool) KYC;
-  mapping (address => bool) AML;
+  mapping (address => bool) public KYC;
+  mapping (address => bool) public AML;
 
-  bool transfersEnabled = false;
-  bool mintingFinished = false;
+  bool public transfersEnabled = false;
+  bool public mintingFinished = false;
 
-  address confirmingOracle;
+  address public confirmingOracle;
 
-  uint256 limitBeforeAML;
+  uint256 public limitBeforeAML;
 
   modifier onlyConfirmingOracle() {
     require(msg.sender == confirmingOracle);
     _;
   }
 
-  modifier onlyWhenTransfersEnabled() {
+  modifier whenTransfersEnabled() {
     require(transfersEnabled == true);
     _;
   }
 
-  function () payable {
-    throw;
+  modifier onlyWhenConfirmed(address investor) {
+    require(checkKYC(investor) == true);
+    require(supplyBy(investor) < limitBeforeAML || checkAML(investor) == true);
+    _;
   }
 
   function Token(address _oracle, uint256 _aml) {
@@ -48,6 +50,10 @@ contract Token is MintableToken {
     return true;
   }
 
+  function frozenBalanceOf(address investor) constant returns (uint256 balance) {
+    return frozenBalances[investor];
+  }
+
   function enableTransfers() onlyOwner {
     transfersEnabled = true;
   }
@@ -56,58 +62,36 @@ contract Token is MintableToken {
     transfersEnabled = false;
   }
 
-  function confirmTokens() {
-    if(!checkKYC(msg.sender)) {
-        throw;
-    }
-
-    if(checkSupply(msg.sender) > limitBeforeAML) {
-        if(!checkAML(msg.sender)) {
-            throw;
-        }
-    }
-
-    frozenBalances[msg.sender] = balances[msg.sender];
-    balances[msg.sender] = 0;
-  }
-
-  function checkSupply(address investor) {
-    return supply[investor];
-  }
-
-  function confirmKYC(address investor) onlyConfirmingOracle {
+  function addKYC(address investor) onlyConfirmingOracle {
     KYC[investor] = true;
   }
 
-  function confirmAML(address investor) onlyConfirmingOracle {
+  function addAML(address investor) onlyConfirmingOracle {
     AML[investor] = true;
   }
 
-  function transfer(address _to, uint256 _value) onlyWhenTransfersEnabled returns (bool) {
-    return super.transfer(_to, _value);
-  }
-
-  function transferFrom(address _from, address _to, uint256 _value) onlyWhenTransfersEnabled returns (bool) {
-    return super.transferFrom(_from, _to, _value);
-  }
-
-  function approve(address _spender, uint256 _value) onlyWhenTransfersEnabled returns (bool) {
-    return super.approve(_spender, _value);
-  }
-
-  function increaseApproval(address _spender, uint _addedValue) onlyWhenTransfersEnabled returns (bool success) {
-    return super.increaseApproval(_spender, _addedValue);
-  }
-
-  function decreaseApproval(address _spender, uint _subtractedValue) onlyWhenTransfersEnabled returns (bool success) {
-    return super.decreaseApproval(_spender, _subtractedValue);
-  }
-
-  function checkKYC(address investor) {
+  function checkKYC(address investor) constant returns (bool exist) {
     return KYC[investor];
   }
 
-  function checkAML(address investor) {
+  function checkAML(address investor) constant returns (bool exist) {
     return AML[investor];
+  }
+
+  function supplyBy(address investor) constant returns (uint256 amount) {
+    return supply[investor];
+  }
+
+  function activateTokens() onlyWhenConfirmed(msg.sender) {
+    balances[msg.sender] = balances[msg.sender].add(frozenBalances[msg.sender]);
+    frozenBalances[msg.sender] = 0;
+  }
+
+  function transfer(address _to, uint256 _value) whenTransfersEnabled returns (bool) {
+    return super.transfer(_to, _value);
+  }
+
+  function transferFrom(address _from, address _to, uint256 _value) whenTransfersEnabled returns (bool) {
+    return super.transferFrom(_from, _to, _value);
   }
 }
