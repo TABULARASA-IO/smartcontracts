@@ -1,188 +1,202 @@
 const Token = artifacts.require('./Token.sol');
 const Crowdsale = artifacts.require('./Crowdsale.sol');
 
-const h = require('../scripts/helper_function.js');
-const ether = h.ether;
-const getBalance = h.getBalance;
-
+const BigNumber = web3.BigNumber;
 const chai = require('chai');
 chai.use(require('chai-as-promised'));
+chai.use(require('chai-bignumber')(BigNumber));
 const expect = chai.expect;
 
-contract("Token", async function([investor, anotherInvestor, hacker]) {
-    const token;
-    const serverOracle;
-    const limitBeforeAML;
+const h = require('../scripts/helper_functions.js');
+const ether = h.ether;
+const getBalance = h.getBalance;
+const expectInvalidOpcode = h.expectInvalidOpcode;
+
+contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
+    let token;
 
     const investment = ether(1);
-    const units = h.inBaseUnits(10);
+    const limitBeforeAML = h.inBaseUnits(3);
+    const units = h.inBaseUnits(1);
+    const unitsOverAML = limitBeforeAML + 1;
 
     beforeEach(async function() {
-        token = await Token.new(serverOracle, limitBeforeAML);
+        token = await Token.new(kown, limitBeforeAML);
     });
 
     describe("Construction", function() {
         it("should be created with correct params", async function() {
-            expect(await token.confirmingOracle()).to.be.equal(serverOracle);
-            expect(await token.limitBeforeAML()).to.be.equal(limitBeforeAML);
+            expect(await token.confirmingOracle()).to.be.equal(kown);
+            expect(await token.limitBeforeAML()).to.be.bignumber.equal(limitBeforeAML);
         });
-        it("should be controlled by crowdsale", async function() {
-            expect(token.owner()).should.be.equal(address(controller));
+        it("should have total supply of 0", async function() {
+            expect(await token.totalSupply()).to.be.bignumber.equal(0);
         });
-        it("should have token supply of 0", async function() {
-            expect(await token.totalSupply()).to.be.equal(0);
+        it("should have minting enabled", async function() {
+            expect(await token.mintingFinished()).to.be.false;
         });
-        it("should enable minting", async function() {
-            expect(token.mintingFinished).should.be.false;
-        });
-        it("should disable transfers", async function() {
-            expect(token.transfersEnabled).should.be.false;
+        it("should have transfering disabled", async function() {
+            expect(await token.transfersEnabled()).to.be.false;
         });
         it("should store KYC", async function() {
-            expect(token.KYC).should.be.mapping;
-            expect(token.KYC).should.be.empty;
+            expect(token.KYC).to.exist;
         });
         it("should store AML", async function() {
-            expect(token.AML).should.be.mapping;
-            expect(token.AML).should.be.empty;
-        });
-        it("should store tokens", async function() {
-            expect(token.balances).should.be.mapping;
-            expect(token.balances).should.be.empty;
+            expect(token.AML).to.exist;
         });
         it("should store frozen tokens", async function() {
-            expect(token.frozenBalances).should.be.mapping;
-            expect(token.frozenBalances).should.be.empty;
+            expect(token.frozenBalances).to.exist;
         });
-        it("should store supply for every investor");
+        it("should store supply for every investor", async function() {
+            expect(token.supply).to.exist;
+        });
     });
 
     it("should not accept payments", async function() {
-        const token = Token.new();
-        await expectInvalidOpcode(token.sendTransaction());
+        expectInvalidOpcode(token.send(investment));
     });
 
-    it("should mint frozen tokens by owner transaction", async function() {
+    it("should mint only frozen tokens by owner transaction", async function() {
         await token.mint(investor, units);
 
-        expect(token.frozenBalanceOf(investor)).should.be.equal(units);
+        expect(await token.totalSupply()).to.be.bignumber.equal(units);
+        expect(await token.supplyBy(investor)).to.be.bignumber.equal(units);
     });
+
     it("should fail to mint tokens by non-owner transaction", async function() {
-        expectInvalidOpcode(await token.mint(investor, units, {from: hacker}));
+        expectInvalidOpcode(token.mint(investor, units, {from: hacker}));
     });
+
     it("should fail to mint tokens after minting is finished", async function() {
         await token.finishMinting();
-        expectInvalidOpcode(await token.mint(investor, units));
-    });
-    it("should not mint confirmed tokens", async function() {
-        await token.mint(investor, units);
 
-        expect(token.balanceOf(investor)).should.be.equal(0);
-    });
-
-    it("should transfer tokens when transfers are enabled", async function() {
-        await token.enableTransfers();
-        await token.mint(investor, units);
-        await token.confirmTokens(investor);
-        await token.transfer(anotherInvestor, units, {from: investor});
-
-        expect(token.balanceOf(investor)).should.be.equal(0);
-        expect(token.balanceOf(anotherInvestor)).should.be.equal(units);
-    });
-    it("should fail to transfer tokens when transfers are disabled", async function() {
-        await token.disableTransfers();
-        await token.mint(investor, units);
-        await token.confirmTokens(investor);
-        expectInvalidOpcode(token.transfer(anotherInvestor, units, {from: investor}));
-    });
-    it("should fail to transfer more tokens than balance", async function() {
-        await token.mint(investor, units);
-        await token.confirmTokens(investor);
-        expectInvalidOpcode(token.transfer(anotherInvestor, units + 1, {from: investor}));
-    });
-
-    it("should transfer tokens from another account when transfers are enabled", async function() {
-        await token.enableTransfers();
-        await token.mint(investor, units);
-        await token.confirmTokens(investor);
-        await token.approve(anotherInvestor, untis, {from: investor});
-        await token.transferFrom(investor, anotherInvestor, units, {from: anotherInvestor});
-
-        expect(token.balanceOf(investor)).should.be.equal(0);
-        expect(token.balanceOf(anotherInvestor)).should.be.equal(units);
-    });
-    it("should fail to transfer tokens from another account when transfers are disabled", async function() {
-        await token.disableTransfers();
-        await token.mint(investor, units);
-        await token.confirmTokens(investor, units);
-        await token.approve(anotherInvestor, units, {from: investor});
-
-        expectInvalidOpcode(token.transferFrom(investor, anotherInvestor, units, {from: anotherInvestor}));
-        expectInvalidOpcode(token.approve(anotherInvestor, units, {from: investor}));
-        expectInvalidOpcode(token.increaseApproval(anotherInvestor, units, {from: investor}));
-        expectInvalidOpcode(token.decreaseApproval(anotherInvestor, units, {from: investor}));
-        expect(token.balanceOf(investor)).should.be.equal(0);
-    });
-    it("should fail to transfer more tokens than allowed", async function() {
-        expect(token.balanceOf(anotherInvestor)).should.be.equal(units);
+        expectInvalidOpcode(token.mint(investor, units, {from: investor}));
+        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
     });
 
     it("should enable transfers by owner transaction", async function() {
-        await token.disableTransfers();
+       await token.enableTransfers();
 
-        await token.enableTransfers();
-        expect(await token.transfersEnabled()).should.be.true;
+       expect(await token.transfersEnabled()).to.be.true;
     });
     it("should fail to enable transfers by non-owner transaction", async function() {
         await token.disableTransfers();
 
-        await token.enableTransfers({from: hacker});
-        expect(await token.transfersEnabled()).should.be.false;
+        expectInvalidOpcode(token.enableTransfers({from: hacker}));
+        expect(await token.transfersEnabled()).to.be.false;
     });
 
     it("should disable transfers by owner transaction", async function() {
-        await token.enableTransfers();
-
         await token.disableTransfers();
-        expect(token.transfersEnabled()).to.be.false;
+
+        expect(await token.transfersEnabled()).to.be.false;
     });
     it("should fail to disable transfers by non-owner transaction", async function() {
         await token.enableTransfers();
 
         expectInvalidOpcode(token.disableTransfers({from: hacker}));
         expect(await token.transfersEnabled()).to.be.true;
-    })
-
-    it("should finish minting by owner transaction", async function() {
-        await token.finishMinting();
-        expect(await token.mintingFinished()).to.be.true;
-    });
-    it("should fail to finish minting by non-owner transaction", async function() {
-        expectInvalidOpcode(token.finishMinting({from: hacker}));
-        expect(await token.mintingFinished()).to.be.false;
     });
 
-    it("should activate frozen tokens by investor transaction", async function() {
+    it("should confirm KYC for address by kown transaction", async function() {
+        const statusBeforeConfirmation = await token.checkKYC(investor);
+        await token.addKYC(investor, {from: kown});
+
+        const statusAfterConfirmation = await token.checkKYC(investor);
+        expect(statusBeforeConfirmation).to.be.false;
+        expect(statusAfterConfirmation).to.be.true;
+    });
+    it("should fail to confirm KYC by non-kown transaction", async function() {
+       expectInvalidOpcode(token.addKYC(investor));
+       expect(await token.checkKYC(investor)).to.be.false;
+    });
+
+    it("should confirm AML for address by kown transaction", async function() {
+        const statusBeforeConfirmation = await token.checkAML(investor);
+        await token.addAML(investor, {from: kown});
+
+        const statusAfterConfirmation = await token.checkAML(investor);
+        expect(statusBeforeConfirmation).to.be.false;
+        expect(statusAfterConfirmation).to.be.true;
+    });
+    it("should fail to confirm AML by non-kown transaction", async function() {
+        expectInvalidOpcode(token.addAML(investor));
+        expect(await token.checkAML(investor)).to.be.false;
+    });
+
+    it("should activate tokens by investor transaction", async function() {
+        await token.mint(investor, unitsOverAML);
+        await token.addKYC(investor, {from: kown});
+        await token.addAML(investor, {from: kown});
+        await token.activateTokens({from: investor});
+
+        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(unitsOverAML);
+    });
+    it("should fail to activate tokens before KYC verification", async function() {
         await token.mint(investor, units);
-        await token.confirmTokens({from: investor});
-        expect(token.balanceOf(investor)).should.be.equal(units);
-        expect(token.frozenBalanceOf(investor)).should.be.equal(0);
+
+        expectInvalidOpcode(token.activateTokens({from: investor}));
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
+        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(units);
+    });
+    it("should fail to activate tokens over limit before AML verification", async function() {
+        await token.mint(investor, unitsOverAML);
+        await token.addKYC(investor, {from: kown});
+
+        expectInvalidOpcode(token.activateTokens({from: investor}));
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
+        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(unitsOverAML);
     });
 
-    it("should add KYC entry by owner transaction", async function() {
-        await token.confirmKYC(investor);
-        expect(token.checkKYC(investor)).should.be.true;
+    it("should transfer tokens", async function() {
+        await token.enableTransfers();
+        await token.mint(investor, units);
+        await token.addKYC(investor, {from: kown});
+        await token.activateTokens({from: investor});
+        await token.transfer(anotherInvestor, units, {from: investor});
+
+        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
+        expect(await token.balanceOf(anotherInvestor)).to.be.bignumber.equal(units);
     });
-    it("should fail to add KYC entry by non-owner transaction", async function() {
-        expectInvalidOpcode(token.confirmKYC(investor, {from: hacker}));
-        expect(token.checkKYC(investor)).should.be.false;
+    it("should fail to transfer frozenTokens", async function() {
+        await token.mint(investor, units);
+
+        expectInvalidOpcode(token.transfer(anotherInvestor, units, {from: investor}));
+        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(units);
+        expect(await token.frozenBalanceOf(anotherInvestor)).to.be.bignumber.equal(0);
     });
-    it("should add AML entry by owner transaction", async function() {
-        await token.confirmAML(investor);
-        expect(token.checkAML(investor)).should.be.true;
+    it("should fail to transfer tokens when transfers are disabled", async function() {
+        await token.disableTransfers();
+        await token.mint(investor, units);
+        await token.addKYC(investor, {from: kown});
+        await token.activateTokens({from: investor});
+
+        expectInvalidOpcode(token.transfer(anotherInvestor, units, {from: investor}));
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);
+        expect(await token.balanceOf(anotherInvestor)).to.be.bignumber.equal(0);
     });
-    it("should fail to add AML entry by non-owner transaction", async function() {
-        expectInvalidOpcode(token.confirmAML(investor, {from: hacker}));
-        expect(token.checkAML(investor)).should.be.false;
+
+    it("should transfer tokens from another account", async function() {
+        await token.enableTransfers();
+        await token.mint(investor, units);
+        await token.approve(anotherInvestor, units, {from: investor});
+        await token.addKYC(investor, {from: kown});
+        await token.activateTokens({from: investor});
+        await token.transferFrom(investor, anotherInvestor, units, {from: anotherInvestor});
+
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
+        expect(await token.balanceOf(anotherInvestor)).to.be.bignumber.equal(units);
+    });
+    it("should fail to transfer tokens from another accounts when transfers are disabled", async function() {
+        await token.disableTransfers();
+        await token.mint(investor, units);
+        await token.approve(anotherInvestor, units, {from: anotherInvestor});
+        await token.addKYC(investor, {from: kown});
+        await token.activateTokens({from: investor});
+
+        expectInvalidOpcode(token.transferFrom(investor, anotherInvestor, units, {from: investor}));
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);
+        expect(await token.balanceOf(anotherInvestor)).to.be.bignumber.equal(0);
     });
 });
