@@ -38,7 +38,7 @@ const expectOutOfGas = async (promise) => {
 }
 
 const ether = (amount) => {
-    return new web3.BigNumber(web3.toWei(amount, 'ether')).toString();
+    return new web3.BigNumber(web3.toWei(amount, 'ether'));
 }
 
 const getBalance = (address) => {
@@ -58,7 +58,7 @@ const tokenWei = (decimals) => (amountInTokens) => {
 }
 
 const inBaseUnits = (decimals) => (tokens) => {
-    return tokens * (10 ** decimals);
+    return new web3.BigNumber(tokens) * new web3.BigNumber(10).pow(decimals);
 }
 
 const inTokenUnits = (decimals) => (tokenBaseUnits) => {
@@ -93,10 +93,41 @@ const increaseTime = (duration) => {
                 id: id+1
             }, (err, res) => {
                 if(err) return reject(err);
+
                 resolve(res);
             })
         })
     })
+}
+
+const advanceBlock = () => {
+    return new Promise((resolve, reject) => {
+        web3.currentProvider.sendAsync({
+            jsonrpc: '2.0',
+            method: 'evm_mine',
+            id: Date.now()
+        }, (err, res) => {
+            if(err) return reject(err);
+
+            return resolve(res);
+        })
+    })
+}
+
+const advanceToBlock = async (number) => {
+    if(web3.eth.blockNumber > number)
+        throw Error("invalid block number");
+
+    while(web3.eth.blockNumber < number) {
+        await advanceBlock();
+    }
+}
+
+const setTime = (target) => {
+    let diff = target - latestTime();
+    if(diff <= 0) throw new Error("invalid target time");
+
+    return increaseTime(diff);
 }
 
 module.exports = {
@@ -112,5 +143,8 @@ module.exports = {
     inBaseUnits,
     inTokenUnits,
     latestTime,
-    increaseTime
+    increaseTime,
+    setTime,
+    advanceBlock,
+    advanceToBlock
 }
