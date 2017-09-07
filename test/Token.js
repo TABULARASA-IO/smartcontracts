@@ -124,11 +124,11 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         expect(await token.checkAML(investor)).to.be.false;
     });
 
-    it("should activate tokens by investor transaction", async function() {
+    it("should activate tokens by kown transaction", async function() {
         await token.mint(investor, unitsOverAML);
         await token.addKYC(investor, {from: kown});
         await token.addAML(investor, {from: kown});
-        await token.activateTokens({from: investor});
+        await token.activateTokens(investor, {from: kown});
 
         expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(unitsOverAML);
@@ -136,7 +136,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     it("should fail to activate tokens before KYC verification", async function() {
         await token.mint(investor, units);
 
-        expectInvalidOpcode(token.activateTokens({from: investor}));
+        expectInvalidOpcode(token.activateTokens(investor, {from: kown}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
         expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(units);
     });
@@ -144,7 +144,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.mint(investor, unitsOverAML);
         await token.addKYC(investor, {from: kown});
 
-        expectInvalidOpcode(token.activateTokens({from: investor}));
+        expectInvalidOpcode(token.activateTokens(investor, {from: kown}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
         expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(unitsOverAML);
     });
@@ -153,7 +153,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.enableTransfers();
         await token.mint(investor, units);
         await token.addKYC(investor, {from: kown});
-        await token.activateTokens({from: investor});
+        await token.activateTokens(investor, {from: kown});
         await token.transfer(anotherInvestor, units, {from: investor});
 
         expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
@@ -170,7 +170,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.disableTransfers();
         await token.mint(investor, units);
         await token.addKYC(investor, {from: kown});
-        await token.activateTokens({from: investor});
+        await token.activateTokens(investor, {from: kown});
 
         expectInvalidOpcode(token.transfer(anotherInvestor, units, {from: investor}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);
@@ -182,7 +182,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.mint(investor, units);
         await token.approve(anotherInvestor, units, {from: investor});
         await token.addKYC(investor, {from: kown});
-        await token.activateTokens({from: investor});
+        await token.activateTokens(investor, {from: kown});
         await token.transferFrom(investor, anotherInvestor, units, {from: anotherInvestor});
 
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
@@ -193,7 +193,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.mint(investor, units);
         await token.approve(anotherInvestor, units, {from: anotherInvestor});
         await token.addKYC(investor, {from: kown});
-        await token.activateTokens({from: investor});
+        await token.activateTokens(investor, {from: kown});
 
         expectInvalidOpcode(token.transferFrom(investor, anotherInvestor, units, {from: investor}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);

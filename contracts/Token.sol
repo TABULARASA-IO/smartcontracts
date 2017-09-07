@@ -82,9 +82,9 @@ contract Token is MintableToken {
     return supply[investor];
   }
 
-  function activateTokens() onlyWhenConfirmed(msg.sender) {
-    balances[msg.sender] = balances[msg.sender].add(frozenBalances[msg.sender]);
-    frozenBalances[msg.sender] = 0;
+  function activateTokens(address investor) onlyConfirmingOracle onlyWhenConfirmed(investor) {
+    balances[investor] = balances[investor].add(frozenBalances[investor]);
+    frozenBalances[investor] = 0;
   }
 
   function transfer(address _to, uint256 _value) whenTransfersEnabled returns (bool) {
