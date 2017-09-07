@@ -1,152 +1,121 @@
 const Token = artifacts.require('./Token.sol');
-const Crowdsale = artifacts.require('./Crowdsale.sol');
+const Crowdsale = artifacts.require('./ICO.sol');
 
-const h = require('../scripts/helper_function.js');
-const ether = h.ether;
-const getBalance = h.getBalance;
-
+const BigNumber = web3.BigNumber;
 const chai = require('chai');
 chai.use(require('chai-as-promised'));
+chai.use(require('chai-bignumber')(BigNumber));
 const expect = chai.expect;
 
-contract("ICO", async function([wallet, investor]) {
-    it("should implement capped crowdsale functionality");
-    it("should be zeppelin audited");
-    it("should be controlled by KOWN");
+const h = require('../scripts/helper_functions.js');
+const ether = h.ether;
+const getBalance = h.getBalance;
+const expectInvalidOpcode = h.expectInvalidOpcode;
+const inBaseUnits = h.inBaseUnits(18);
 
-    const startTime;
-    const endTime;
-    const rate;
-    const hardCap;
-
-    const crowdsale;
-    const token;
-
+contract("ICO", async function([_, kown, wallet, investor]) {
+    const limitBeforeAML = inBaseUnits(100);
     const investment = ether(1);
+    const rate = new BigNumber(10);
+    const cap = ether(10);
+
+    const stageBonus = inBaseUnits(2);
+    const firstHourBonus = inBaseUnits(1);
+
+    const expectedSupplyForInvestment = investment.times(rate).plus(stageBonus);
+    const expectedSupplyForInvestmentInFirstHour = expectedSupplyForInvestment.plus(firstHourBonus);
+
+    const oneHour = 3600;
+    const oneDay = oneHour * 24;
+
+    let startTime;
+    let endTime;
+    let afterEndTime;
+
+    let token;
+    let crowdsale;
+
+    before(async function() {
+        await h.advanceBlock();
+    })
 
     beforeEach(async function() {
-        // CappedCrowdsale(hardCap) Crowdsale(...)
-        crowdsale = await Crowdsale.new(wallet, startTime, endTime, rate, hardCap, limitBeforeAML);
+        startTime = h.latestTime() + oneDay;
+        endTime = startTime + oneDay;
+        afterEndTime = endTime + 1;
+
+        token = await Token.new(kown, limitBeforeAML);
+        crowdsale = await Crowdsale.new(
+            startTime,
+            endTime,
+            rate,
+            cap,
+            wallet,
+            stageBonus,
+            firstHourBonus
+        );
+        await token.transferOwnership(crowdsale.address);
+        await crowdsale.setToken(token.address);
     });
 
-    it("should start with correct params", async function() {
-        expect(await crowdsale.startTime().to.be.equal(startTime));
-        expect(await crowdsale.endTime().to.be.equal(endTime));
-        expect(await crowdsale.rate().to.be.equal(rate));
-        expect(await crowdsale.hardCap().to.be.equal(hardCap));
-        expect(await crowdsale.wallet().to.be.equal(wallet));
-        expect(await crowdsale.limitBeforeAML().to.be.equal(limitBeforeAML));
+    it("should be created with correct params", async function() {
+        expect(await crowdsale.startTime()).to.be.bignumber.equal(startTime);
+        expect(await crowdsale.endTime()).to.be.bignumber.equal(endTime);
+        expect(await crowdsale.rate()).to.be.bignumber.equal(rate);
+        expect(await crowdsale.wallet()).to.be.bignumber.equal(wallet);
+        expect(await crowdsale.cap()).to.be.bignumber.equal(cap);
+        expect(await crowdsale.stageBonus()).to.be.bignumber.equal(stageBonus);
+        expect(await crowdsale.firstHourBonus()).to.be.bignumber.equal(firstHourBonus);
     });
-    // implement contactable
-    it("should have link to official document");
-
 
     it("should own token", async function() {
-        await crowdsale.token().owner().should.be.equal(address(crowdsale));
+        expect(await crowdsale.token()).to.exist;
+        expect(await Token.at(await crowdsale.token()).owner()).to.be.equal(crowdsale.address);
     });
 
-    it("should accept eth payments", async function() {
-        await crowdsale.sendTransaction(hardCap.minus(lessThanCap)).to.be.fulfilled;
-        await crowdsale.sendTransaction(lessThanCap).to.be.fulfilled;
+    it("should accept payments in etherum", async function() {
+        await h.setTime(startTime);
+
+        const walletBalanceBefore = getBalance(wallet);
+        const investorBalanceBefore = getBalance(investor);
+
+        await crowdsale.sendTransaction({value: investment, from: investor});
+
+        const walletBalanceAfter = getBalance(wallet);
+        const investorBalanceAfter = getBalance(investor);
+
+        expect(walletBalanceAfter).to.be.bignumber.above(walletBalanceBefore);
+        expect(investorBalanceAfter).to.be.bignumber.below(investorBalanceBefore);
+
+        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(expectedSupplyForInvestmentInFirstHour);
+        expect(await token.totalSupply()).to.be.bignumber.equal(expectedSupplyForInvestmentInFirstHour);
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
-    // later...
-    it("should accept btc payments");
+    it("should mint less tokens after one hour", async function() {
+        await h.setTime(startTime+oneHour);
 
-    describe("accept payment", function() {
-        const walletBalanceBefore;
-        const investorBalanceBefore;
-        const frozenTokensBefore;
-        const tokensBefore;
-        const totalSupplyBefore;
-        const paidAmountBefore;
+        await crowdsale.sendTransaction({value: investment, from: investor});
 
-        before(async function() {
-            walletBalanceBefore = await h.getBalance(walelt);
-            investorBalanceBefore = await h.getBalance(investor);
-            frozenTokensBefore = await token.frozenBalanceOf(investor);
-            tokensBefore = await token.balanceOf(investor);
-            totalSupplyBefore = await token.totalSupply();
-            paidAmountBefore = await token.paidAmountBefore();
-            await crowdsale.sendTransaction(investment, {from: investor});
-        });
-
-        it("should transfer money to the wallet", async function() {
-            const walletBalanceAfter = h.getBalance(wallet);
-            const investorBalanceAfter = h.getBalance(investor);
-            expect(walletBalanceAfter).to.be.above(walletBalanceBefore);
-            expect(investorBalanceAfter).to.be.above(investorBalanceBefore);
-        });
-        it("should mint frozen tokens for the sender", async function() {
-            expect(await token.frozenBalanceOf(investor)).to.be.above(frozenTokensBefore);
-            expect(await token.balanceOf(investor)).to.be.above(tokensBefore);
-        });
-        it("should increase total token supply", async function() {
-            expect(await token.totalSupply()).to.be.above(totalSupplyBefore);
-        });
-        it("should increase paid amount for the sender", async function() {
-            expect(await token.paidAmountOf(investor)).to.be.above(paidAmountBefore);
-        });
+        expect((await token.frozenBalanceOf(investor))).to.be.bignumber.equal(expectedSupplyForInvestment);
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
+        expect(await token.totalSupply()).to.be.bignumber.equal(expectedSupplyForInvestment);
+    });
+    it("should fail to accept payments before start", async function() {
+        expectInvalidOpcode(crowdsale.send(investment));
+        expectInvalidOpcode(crowdsale.buyTokens(investor, {value: investment, from: investor}));
+        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
+    });
+    it("should fail to accept payments after end", async function() {
+        await h.setTime(afterEndTime);
+        expectInvalidOpcode(crowdsale.send(investment));
+        expectInvalidOpcode(crowdsale.buyTokens(investor, {value: investment, from: investor}));
+        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
     });
 
-    it("should reject payments before start", async function() {
-        setTime(beforeStart);
-        expectInvalidOpcode(crowdsale.sendTransaction(investment, {from: investor}));
-    });
-    it("should reject payments after end", async function() {
-        setTime(afterEnd);
-        expectInvalidOpcode(crowdsale.sendTransaction(investment, {from: investor}));
-    });
-    it("should reject payments outside cap", async function() {
-        await crowdsale.sendTransaction(hardCap);
-        expectInvalidOpcode(crowdsale.send(1));
-    });
-    it("should reject payments that exceed cap", async function() {
-        expectInvalidOpcode(crowdsale.sendTransaction(hardCap.plus(1)));
-    });
-
-    it("should be started after begin time", async function() {
-        await increaseTimeTo(this.startTime);
-
-        const mintingEnabled = await token.mintingEnabled();
-        expect(mintingEnabled).should.be.true;
-    });
-    it("should be ended after end time", async function() {
-        await increaseTimeTo(endTime+1);
-
-        expect(await crowdsale.hasEnded()).to.be.true;
-        expect(await token.mintingEnabled()).to.be.false;
-    });
-    it("should be ended after hard cap reached", async function() {
-        await crowdsale.sendTransaction(hardCap);
-
-        expect(await crowdsale.hasEnded()).to.be.true;
-        expect(await token.mintingEnabled()).to.be.false;
-    });
-
-    describe("calculate token amount", function() {
-        it("should have constant rate", async function() {
-            const rate1 = await crowdsale.rate();
-            increaseTime();
-            const rate2 = await crowdsale.rate();
-            expect(rate1).should.be.equal(rate2);
-        });
-        it("should be in proportion to price", async function() {
-            const crowdsale1 = await Crowdsale.new(wallet, startTime, endTime, rate, hardCap, limitBeforeAML);
-            const crowdsale2 = await Crowdsale.new(wallet, startTime, endTime, rate * 3, hardCap, limitBeforeAML);
-
-            const rate1 = await crowdsale1.rate();
-            const rate2 = await crowdsale2.rate();
-
-            await crowdsale1.sendTransaction(investment, {from: investor});
-            await crowdsale2.sendTransaction(investment, {from: investor});
-
-            const amount1 = await crowdsale1.token().balanceOf(investor);
-            const amount2 = await crowdsale2.token().balanceOf(investor);
-
-            expect(amount1/amount2).to.be.equal(3);
-        });
-        it("should be in proportion to payment amount");
-        it("should be in proportion to stage bonus");
-        it("should be incremented with bonus in first hour");
+    it("should fail to exceed cap", async function() {
+        await h.setTime(startTime);
+        expectInvalidOpcode(crowdsale.sendTransaction({value: cap.plus(1), from: investor}));
+        expect(crowdsale.sendTransaction({value: cap.minus(1), from: investor})).to.be.eventually.fulfilled;
+        expectInvalidOpcode(crowdsale.sendTransaction({value: 2, from: investor}));
     });
 });
