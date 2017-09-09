@@ -19,9 +19,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     let token;
 
     const investment = ether(1);
-    const limitBeforeAML = inBaseUnits(3);
     const units = inBaseUnits(1);
-    const unitsOverAML = limitBeforeAML + 1;
 
     // We should correspond signature to investor when he is ready to activate tokens
     const signature = web3.eth.sign(kown, sha3(investor));
@@ -30,13 +28,12 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     console.log(sha3(investor));
 
     beforeEach(async function() {
-        token = await Token.new(kown, limitBeforeAML);
+        token = await Token.new(kown);
     });
 
     describe("Construction", function() {
         it("should be created with correct params", async function() {
             expect(await token.confirmingOracle()).to.be.equal(kown);
-            expect(await token.limitBeforeAML()).to.be.bignumber.equal(limitBeforeAML);
         });
         it("should have total supply of 0", async function() {
             expect(await token.totalSupply()).to.be.bignumber.equal(0);
@@ -47,17 +44,8 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         it("should have transfering disabled", async function() {
             expect(await token.transfersEnabled()).to.be.false;
         });
-        it("should store KYC", async function() {
-            expect(token.KYC).to.exist;
-        });
-        it("should store AML", async function() {
-            expect(token.AML).to.exist;
-        });
         it("should store frozen tokens", async function() {
             expect(token.frozenBalances).to.exist;
-        });
-        it("should store supply for every investor", async function() {
-            expect(token.supply).to.exist;
         });
     });
 
@@ -69,7 +57,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.mint(investor, units);
 
         expect(await token.totalSupply()).to.be.bignumber.equal(units);
-        expect(await token.supplyBy(investor)).to.be.bignumber.equal(units);
     });
 
     it("should fail to mint tokens by non-owner transaction", async function() {
@@ -107,32 +94,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         expect(await token.transfersEnabled()).to.be.true;
     });
 
-    it("should confirm KYC for address by kown transaction", async function() {
-        const statusBeforeConfirmation = await token.checkKYC(investor);
-        await token.addKYC(investor, {from: kown});
-
-        const statusAfterConfirmation = await token.checkKYC(investor);
-        expect(statusBeforeConfirmation).to.be.false;
-        expect(statusAfterConfirmation).to.be.true;
-    });
-    it("should fail to confirm KYC by non-kown transaction", async function() {
-       expectInvalidOpcode(token.addKYC(investor));
-       expect(await token.checkKYC(investor)).to.be.false;
-    });
-
-    it("should confirm AML for address by kow[n transaction", async function() {
-        const statusBeforeConfirmation = await token.checkAML(investor);
-        await token.addAML(investor, {from: kown});
-
-        const statusAfterConfirmation = await token.checkAML(investor);
-        expect(statusBeforeConfirmation).to.be.false;
-        expect(statusAfterConfirmation).to.be.true;
-    });
-    it("should fail to confirm AML by non-kown transaction", async function() {
-        expectInvalidOpcode(token.addAML(investor));
-        expect(await token.checkAML(investor)).to.be.false;
-    });
-
 	it("should activate tokens by investor transaction", async function() {
 		token.mint(investor, units);
 
@@ -145,7 +106,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     it("should transfer tokens", async function() {
         await token.enableTransfers();
         await token.mint(investor, units);
-        await token.addKYC(investor, {from: kown});
         await token.activateTokens(signature, {from: investor});
         await token.transfer(anotherInvestor, units, {from: investor});
 
@@ -162,7 +122,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     it("should fail to transfer tokens when transfers are disabled", async function() {
         await token.disableTransfers();
         await token.mint(investor, units);
-        await token.addKYC(investor, {from: kown});
         await token.activateTokens(signature, {from: investor});
 
         expectInvalidOpcode(token.transfer(anotherInvestor, units, {from: investor}));
@@ -174,7 +133,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.enableTransfers();
         await token.mint(investor, units);
         await token.approve(anotherInvestor, units, {from: investor});
-        await token.addKYC(investor, {from: kown});
         await token.activateTokens(signature, {from: investor});
         await token.transferFrom(investor, anotherInvestor, units, {from: anotherInvestor});
 
@@ -185,7 +143,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.disableTransfers();
         await token.mint(investor, units);
         await token.approve(anotherInvestor, units, {from: anotherInvestor});
-        await token.addKYC(investor, {from: kown});
         await token.activateTokens(signature, {from: investor});
 
         expectInvalidOpcode(token.transferFrom(investor, anotherInvestor, units, {from: investor}));
