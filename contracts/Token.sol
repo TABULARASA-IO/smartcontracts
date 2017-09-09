@@ -1,6 +1,7 @@
 pragma solidity ^0.4.11;
 
 import 'zeppelin-solidity/contracts/token/MintableToken.sol';
+import 'zeppelin-solidity/contracts/ECRecovery.sol';
 
 contract Token is MintableToken {
   string public constant name = "GameLeapToken";
@@ -20,6 +21,9 @@ contract Token is MintableToken {
 
   uint256 public limitBeforeAML;
 
+  event LogAddress(address _address);
+  event LogBytes32(bytes32 _bytes32);
+
   modifier onlyConfirmingOracle() {
     require(msg.sender == confirmingOracle);
     _;
@@ -33,6 +37,19 @@ contract Token is MintableToken {
   modifier onlyWhenConfirmed(address investor) {
     require(checkKYC(investor) == true);
     require(supplyBy(investor) < limitBeforeAML || checkAML(investor) == true);
+    _;
+  }
+
+  modifier whenInvestorSigned(address investor, bytes signature) {
+    LogBytes32(sha3(investor));
+    require(ECRecovery.recover(sha3(investor), signature) == confirmingOracle);
+    _;
+  }
+
+  modifier onlySigned(address investor, bytes signature) {
+    bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+    bytes32 hash = keccak256(prefix, sha3(investor));
+    require(ECRecovery.recover(hash, signature) == confirmingOracle);
     _;
   }
 
@@ -82,9 +99,9 @@ contract Token is MintableToken {
     return supply[investor];
   }
 
-  function activateTokens(address investor) onlyConfirmingOracle onlyWhenConfirmed(investor) {
-    balances[investor] = balances[investor].add(frozenBalances[investor]);
-    frozenBalances[investor] = 0;
+  function activateTokens(bytes signature) onlySigned(msg.sender, signature) public returns(bool) {
+    balances[msg.sender] = balances[msg.sender].add(frozenBalances[msg.sender]);
+    frozenBalances[msg.sender] = 0;
   }
 
   function transfer(address _to, uint256 _value) whenTransfersEnabled returns (bool) {
