@@ -12,7 +12,6 @@ const getBalance = h.getBalance;
 const expectInvalidOpcode = h.expectInvalidOpcode;
 const inBaseUnits = h.inBaseUnits(18);
 
-const util = require('ethereumjs-util');
 const sha3 = require('solidity-sha3').default;
 
 contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
@@ -53,7 +52,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         expectInvalidOpcode(token.send(investment));
     });
 
-    it("should mint only frozen tokens by owner transaction", async function() {
+    it("should mint tokens by owner transaction", async function() {
         await token.mint(investor, units);
 
         expect(await token.totalSupply()).to.be.bignumber.equal(units);
@@ -67,7 +66,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.finishMinting();
 
         expectInvalidOpcode(token.mint(investor, units, {from: investor}));
-        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
 
     it("should enable transfers by owner transaction", async function() {
@@ -116,7 +115,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.mint(investor, units);
 
         expectInvalidOpcode(token.transfer(anotherInvestor, units, {from: investor}));
-        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(units);
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);
         expect(await token.frozenBalanceOf(anotherInvestor)).to.be.bignumber.equal(0);
     });
     it("should fail to transfer tokens when transfers are disabled", async function() {

@@ -1,5 +1,6 @@
 const Token = artifacts.require('./Token.sol');
 const Crowdsale = artifacts.require('./ICO.sol');
+const TokenHolderFactory = artifacts.require('./TokenHolderFactory.sol');
 
 const BigNumber = web3.BigNumber;
 const chai = require('chai');
@@ -56,6 +57,9 @@ contract("ICO", async function([_, kown, wallet, investor]) {
         );
         await token.transferOwnership(crowdsale.address);
         await crowdsale.setToken(token.address);
+
+	    const factory = await TokenHolderFactory.new(kown, endTime);
+	    await crowdsale.setTokenHolderFactory(factory.address);
     });
 
     it("should be created with correct params", async function() {
@@ -79,7 +83,9 @@ contract("ICO", async function([_, kown, wallet, investor]) {
         const walletBalanceBefore = getBalance(wallet);
         const investorBalanceBefore = getBalance(investor);
 
-        await crowdsale.sendTransaction({value: investment, from: investor});
+	    const tx = await crowdsale.sendTransaction({value: investment, from: investor});
+
+	    const lockedAccount = tx.logs[0].args.lockedAccount;
 
         const walletBalanceAfter = getBalance(wallet);
         const investorBalanceAfter = getBalance(investor);
@@ -87,29 +93,31 @@ contract("ICO", async function([_, kown, wallet, investor]) {
         expect(walletBalanceAfter).to.be.bignumber.above(walletBalanceBefore);
         expect(investorBalanceAfter).to.be.bignumber.below(investorBalanceBefore);
 
-        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(expectedSupplyForInvestmentInFirstHour);
+        expect(await token.balanceOf(lockedAccount)).to.be.bignumber.equal(expectedSupplyForInvestmentInFirstHour);
         expect(await token.totalSupply()).to.be.bignumber.equal(expectedSupplyForInvestmentInFirstHour);
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
     it("should mint less tokens after one hour", async function() {
         await h.setTime(startTime+oneHour);
 
-        await crowdsale.sendTransaction({value: investment, from: investor});
+        const tx = await crowdsale.sendTransaction({value: investment, from: investor});
 
-        expect((await token.frozenBalanceOf(investor))).to.be.bignumber.equal(expectedSupplyForInvestment);
+        const lockedAccount = tx.logs[0].args.lockedAccount;
+
+        expect((await token.balanceOf(lockedAccount))).to.be.bignumber.equal(expectedSupplyForInvestment);
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
         expect(await token.totalSupply()).to.be.bignumber.equal(expectedSupplyForInvestment);
     });
     it("should fail to accept payments before start", async function() {
         expectInvalidOpcode(crowdsale.send(investment));
         expectInvalidOpcode(crowdsale.buyTokens(investor, {value: investment, from: investor}));
-        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
     it("should fail to accept payments after end", async function() {
         await h.setTime(afterEndTime);
         expectInvalidOpcode(crowdsale.send(investment));
         expectInvalidOpcode(crowdsale.buyTokens(investor, {value: investment, from: investor}));
-        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
 
     it("should fail to exceed cap", async function() {
