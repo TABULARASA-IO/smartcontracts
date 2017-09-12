@@ -3,11 +3,14 @@ pragma solidity ^0.4.11;
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import 'zeppelin-solidity/contracts/crowdsale/CappedCrowdsale.sol';
 import './Token.sol';
+import './TokenHolder.sol';
+import './TokenHolderFactory.sol';
 
 contract ICO {
     using SafeMath for uint256;
 
     Token public token;
+    TokenHolderFactory public factory;
 
     uint256 public startTime;
     uint256 public endTime;
@@ -23,7 +26,7 @@ contract ICO {
     uint256 public stageBonus;
     uint256 public firstHourBonus;
 
-    event TokenPurchase(address purchaser, address beneficiary, uint256 value, uint256 amount);
+    event TokenPurchase(address purchaser, address beneficiary, address lockedAccount, uint256 value, uint256 amount);
 
     function ICO(
       uint256 _startTime,
@@ -57,6 +60,10 @@ contract ICO {
         token = Token(_token);
     }
 
+    function setTokenHolderFactory(address _factory) public {
+        factory = TokenHolderFactory(_factory);
+    }
+
     function buyTokens(address beneficiary) payable {
       require(beneficiary != 0x0);
       require(validPurchase());
@@ -72,8 +79,11 @@ contract ICO {
 
       weiRaised = weiRaised.add(weiAmount);
 
-      token.mint(beneficiary, tokens);
-      TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+      TokenHolder lockedAccount = 
+        TokenHolder(factory.createTokenHolder(beneficiary));
+
+      token.mint(lockedAccount, tokens);
+      TokenPurchase(msg.sender, beneficiary, lockedAccount, weiAmount, tokens);
 
       forwardFunds();
     }

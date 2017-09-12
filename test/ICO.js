@@ -58,7 +58,8 @@ contract("ICO", async function([_, kown, wallet, investor]) {
         await token.transferOwnership(crowdsale.address);
         await crowdsale.setToken(token.address);
 
-	    const factory = await TokenHolderFactory.new(kown, endTime);
+	    const factory = await TokenHolderFactory.new(token.address, kown, endTime);
+	    await factory.transferOwnership(crowdsale.address);
 	    await crowdsale.setTokenHolderFactory(factory.address);
     });
 
