@@ -1,27 +1,18 @@
 pragma solidity ^0.4.11;
 
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
-import 'zeppelin-solidity/contracts/crowdsale/CappedCrowdsale.sol';
 import './Token.sol';
 import './TokenHolder.sol';
 import './TokenHolderFactory.sol';
+import './Crowdsale.sol';
 
-contract ICO {
+contract ICO is Crowdsale {
     using SafeMath for uint256;
 
     Token public token;
     TokenHolderFactory public factory;
 
-    uint256 public startTime;
-    uint256 public endTime;
-
-    address public wallet;
-
     uint256 public rate;
-
-    uint256 public weiRaised;
-
-    uint256 public cap;
 
     uint256 public stageBonus;
     uint256 public firstHourBonus;
@@ -35,25 +26,13 @@ contract ICO {
       uint256 _cap,
       address _wallet,
       uint256 _stageBonus,
-      uint256 _firstHourBonus)
+      uint256 _firstHourBonus) Crowdsale(_startTime, _endTime, _cap, _wallet)
     {
-        require(_startTime >= now);
-        require(_endTime >= _startTime);
         require(_rate > 0);
-        require(_wallet != 0x0);
-        require(_cap > 0);
 
-        startTime = _startTime;
-        endTime = _endTime;
         rate = _rate;
-        wallet = _wallet;
-        cap = _cap;
         stageBonus = _stageBonus;
         firstHourBonus = _firstHourBonus;
-    }
-
-    function() payable {
-        buyTokens(msg.sender);
     }
 
     function setToken(address _token) public {
@@ -64,9 +43,8 @@ contract ICO {
         factory = TokenHolderFactory(_factory);
     }
 
-    function buyTokens(address beneficiary) payable {
-      require(beneficiary != 0x0);
-      require(validPurchase());
+    function buyTokens() payable {
+        require(validPayment());
 
       uint256 weiAmount = msg.value;
 
@@ -80,27 +58,15 @@ contract ICO {
       weiRaised = weiRaised.add(weiAmount);
 
       TokenHolder lockedAccount = 
-        TokenHolder(factory.createTokenHolder(beneficiary));
+        TokenHolder(factory.createTokenHolder(msg.sender));
 
       token.mint(lockedAccount, tokens);
-      TokenPurchase(msg.sender, beneficiary, lockedAccount, weiAmount, tokens);
+      TokenPurchase(msg.sender, msg.sender, lockedAccount, weiAmount, tokens);
 
       forwardFunds();
     }
 
     function forwardFunds() internal {
         wallet.transfer(msg.value);
-    }
-
-    function validPurchase() internal constant returns (bool) {
-        bool withinPeriod = now >= startTime && now <= endTime;
-        bool nonZeroPurchase = msg.value != 0;
-        bool withinCap = weiRaised.add(msg.value) <= cap;
-        return withinPeriod && nonZeroPurchase && withinCap;
-    }
-
-    function hasEnded() public constant returns (bool) {
-        bool capReached = weiRaised >= cap;
-        return now > endTime || capReached;
     }
 }

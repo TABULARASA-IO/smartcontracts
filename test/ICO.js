@@ -84,7 +84,7 @@ contract("ICO", async function([_, kown, wallet, investor]) {
         const walletBalanceBefore = getBalance(wallet);
         const investorBalanceBefore = getBalance(investor);
 
-	    const tx = await crowdsale.sendTransaction({value: investment, from: investor});
+	    const tx = await crowdsale.buyTokens({value: investment, from: investor});
 
 	    const lockedAccount = tx.logs[0].args.lockedAccount;
 
@@ -101,7 +101,7 @@ contract("ICO", async function([_, kown, wallet, investor]) {
     it("should mint less tokens after one hour", async function() {
         await h.setTime(startTime+oneHour);
 
-        const tx = await crowdsale.sendTransaction({value: investment, from: investor});
+        const tx = await crowdsale.buyTokens({value: investment, from: investor});
 
         const lockedAccount = tx.logs[0].args.lockedAccount;
 
@@ -110,21 +110,24 @@ contract("ICO", async function([_, kown, wallet, investor]) {
         expect(await token.totalSupply()).to.be.bignumber.equal(expectedSupplyForInvestment);
     });
     it("should fail to accept payments before start", async function() {
-        expectInvalidOpcode(crowdsale.send(investment));
-        expectInvalidOpcode(crowdsale.buyTokens(investor, {value: investment, from: investor}));
+        expectInvalidOpcode(crowdsale.buyTokens({value: investment, from: investor}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
     it("should fail to accept payments after end", async function() {
         await h.setTime(afterEndTime);
-        expectInvalidOpcode(crowdsale.send(investment));
-        expectInvalidOpcode(crowdsale.buyTokens(investor, {value: investment, from: investor}));
+        expectInvalidOpcode(crowdsale.buyTokens({value: investment, from: investor}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
 
     it("should fail to exceed cap", async function() {
         await h.setTime(startTime);
-        expectInvalidOpcode(crowdsale.sendTransaction({value: cap.plus(1), from: investor}));
-        expect(crowdsale.sendTransaction({value: cap.minus(1), from: investor})).to.be.eventually.fulfilled;
-        expectInvalidOpcode(crowdsale.sendTransaction({value: 2, from: investor}));
+        expectInvalidOpcode(crowdsale.buyTokens({value: cap.plus(1), from: investor}));
+        expect(crowdsale.buyTokens({value: cap.minus(1), from: investor})).to.be.eventually.fulfilled;
+        expectInvalidOpcode(crowdsale.buyTokens({value: 2, from: investor}));
+    });
+
+    it("should fail to process payments directly", async function() {
+       await h.setTime(startTime);
+       expectInvalidOpcode(crowdsale.sendTransaction({value: investment, from: investor}));
     });
 });
