@@ -31,9 +31,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     });
 
     describe("Construction", function() {
-        it("should be created with correct params", async function() {
-            expect(await token.confirmingOracle()).to.be.equal(kown);
-        });
         it("should have total supply of 0", async function() {
             expect(await token.totalSupply()).to.be.bignumber.equal(0);
         });
@@ -42,9 +39,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         });
         it("should have transfering disabled", async function() {
             expect(await token.transfersEnabled()).to.be.false;
-        });
-        it("should store frozen tokens", async function() {
-            expect(token.frozenBalances).to.exist;
         });
     });
 
@@ -56,6 +50,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.mint(investor, units);
 
         expect(await token.totalSupply()).to.be.bignumber.equal(units);
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);
     });
 
     it("should fail to mint tokens by non-owner transaction", async function() {
@@ -93,35 +88,17 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         expect(await token.transfersEnabled()).to.be.true;
     });
 
-	it("should activate tokens by investor transaction", async function() {
-		token.mint(investor, units);
-
-		await token.activateTokens(signature, {from: investor});
-
-		expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);
-		expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
-	});
-
     it("should transfer tokens", async function() {
         await token.enableTransfers();
         await token.mint(investor, units);
-        await token.activateTokens(signature, {from: investor});
         await token.transfer(anotherInvestor, units, {from: investor});
 
-        expect(await token.frozenBalanceOf(investor)).to.be.bignumber.equal(0);
         expect(await token.balanceOf(anotherInvestor)).to.be.bignumber.equal(units);
-    });
-    it("should fail to transfer frozenTokens", async function() {
-        await token.mint(investor, units);
-
-        expectInvalidOpcode(token.transfer(anotherInvestor, units, {from: investor}));
-        expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);
-        expect(await token.frozenBalanceOf(anotherInvestor)).to.be.bignumber.equal(0);
+        expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
     it("should fail to transfer tokens when transfers are disabled", async function() {
         await token.disableTransfers();
         await token.mint(investor, units);
-        await token.activateTokens(signature, {from: investor});
 
         expectInvalidOpcode(token.transfer(anotherInvestor, units, {from: investor}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);
@@ -132,7 +109,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.enableTransfers();
         await token.mint(investor, units);
         await token.approve(anotherInvestor, units, {from: investor});
-        await token.activateTokens(signature, {from: investor});
         await token.transferFrom(investor, anotherInvestor, units, {from: anotherInvestor});
 
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
@@ -142,7 +118,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         await token.disableTransfers();
         await token.mint(investor, units);
         await token.approve(anotherInvestor, units, {from: anotherInvestor});
-        await token.activateTokens(signature, {from: investor});
 
         expectInvalidOpcode(token.transferFrom(investor, anotherInvestor, units, {from: investor}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);
