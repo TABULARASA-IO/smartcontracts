@@ -28,6 +28,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
 
     beforeEach(async function() {
         token = await Token.new(kown);
+        await token.pause();
     });
 
     describe("Construction", function() {
@@ -38,7 +39,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
             expect(await token.mintingFinished()).to.be.false;
         });
         it("should have transfering disabled", async function() {
-            expect(await token.transfersEnabled()).to.be.false;
+            expect(await token.paused()).to.be.true;
         });
     });
 
@@ -65,31 +66,17 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     });
 
     it("should enable transfers by owner transaction", async function() {
-       await token.enableTransfers();
+       await token.unpause();
 
-       expect(await token.transfersEnabled()).to.be.true;
+       expect(await token.paused()).to.be.false;
     });
     it("should fail to enable transfers by non-owner transaction", async function() {
-        await token.disableTransfers();
-
-        expectInvalidOpcode(token.enableTransfers({from: hacker}));
-        expect(await token.transfersEnabled()).to.be.false;
-    });
-
-    it("should disable transfers by owner transaction", async function() {
-        await token.disableTransfers();
-
-        expect(await token.transfersEnabled()).to.be.false;
-    });
-    it("should fail to disable transfers by non-owner transaction", async function() {
-        await token.enableTransfers();
-
-        expectInvalidOpcode(token.disableTransfers({from: hacker}));
-        expect(await token.transfersEnabled()).to.be.true;
+        expectInvalidOpcode(token.unpause({from: hacker}));
+        expect(await token.paused()).to.be.true;
     });
 
     it("should transfer tokens", async function() {
-        await token.enableTransfers();
+        await token.unpause();
         await token.mint(investor, units);
         await token.transfer(anotherInvestor, units, {from: investor});
 
@@ -97,7 +84,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
     it("should fail to transfer tokens when transfers are disabled", async function() {
-        await token.disableTransfers();
         await token.mint(investor, units);
 
         expectInvalidOpcode(token.transfer(anotherInvestor, units, {from: investor}));
@@ -106,7 +92,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     });
 
     it("should transfer tokens from another account", async function() {
-        await token.enableTransfers();
+        await token.unpause();
         await token.mint(investor, units);
         await token.approve(anotherInvestor, units, {from: investor});
         await token.transferFrom(investor, anotherInvestor, units, {from: anotherInvestor});
@@ -115,7 +101,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         expect(await token.balanceOf(anotherInvestor)).to.be.bignumber.equal(units);
     });
     it("should fail to transfer tokens from another accounts when transfers are disabled", async function() {
-        await token.disableTransfers();
         await token.mint(investor, units);
         await token.approve(anotherInvestor, units, {from: anotherInvestor});
 
