@@ -24,8 +24,10 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 	const oneHour = 3600;
 	let releaseAfter;
 
+	const salt = "presaleholder";
+
 	const signature = web3.eth.sign(signer, sha3(beneficiary));
-	const invalidSignature = web3.eth.sign(beneficiary, sha3(beneficiary));
+	const saltedSignature = web3.eth.sign(beneficiary, sha3(beneficiary.concat(salt)));
 
 	before(async function() {
 		await h.advanceBlock();
@@ -38,7 +40,6 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 		tokenHolder = await TokenHolder.new(tokenAddress, signer, beneficiary, releaseAfter);
 		tokenHolderAddress = tokenHolder.address;
 
-		await token.enableTransfers();
 	});
 
 	it("should be initialized correctly", async function() {
@@ -69,7 +70,7 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 		await h.setTime(releaseAfter);
 		await tokenHolder.release(signature, {from: beneficiary});
 
-		expectInvalidOpcode(tokenHolder.release({from: beneficiary}));
+		expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
 	});
 	it("should fail to release tokens before release time", async function() {
 		await token.mint(tokenHolderAddress, units);
@@ -80,7 +81,7 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 		await token.mint(tokenHolderAddress, units);
 		await h.setTime(releaseAfter);
 
-		expectInvalidOpcode(tokenHolder.release(invalidSignature, {from: beneficiary}));
+		expectInvalidOpcode(tokenHolder.release(saltedSignature, {from: beneficiary}));
 	});
 
 	it("should fail to receive payments", async function() {
