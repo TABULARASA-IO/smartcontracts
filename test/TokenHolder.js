@@ -35,11 +35,11 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 
 	beforeEach(async function() {
 		releaseAfter = h.latestTime() + oneHour;
+		releaseBefore = releaseAfter + oneHour;
 		token = await Token.new(signer);
 		tokenAddress = token.address;
-		tokenHolder = await TokenHolder.new(tokenAddress, signer, beneficiary, releaseAfter);
+		tokenHolder = await TokenHolder.new(tokenAddress, signer, beneficiary, releaseAfter, releaseBefore);
 		tokenHolderAddress = tokenHolder.address;
-
 	});
 
 	it("should be initialized correctly", async function() {
@@ -77,9 +77,15 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 
 		expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
 	});
+	it("should fail to release tokens after release time", async function() {
+		await token.mint(tokenHolderAddress, units);
+		await h.setTime(releaseBefore);
+
+		expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
+	});
 	it("should fail to release tokens with invalid signature", async function() {
 		await token.mint(tokenHolderAddress, units);
-		await h.setTime(releaseAfter);
+		await h.setTime(releaseBefore);
 
 		expectInvalidOpcode(tokenHolder.release(saltedSignature, {from: beneficiary}));
 	});

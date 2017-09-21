@@ -24,8 +24,9 @@ contract("TokenHolderFactory", async function([_, signer, investor, anotherInves
 
 	beforeEach(async function() {
 		releaseAfter = h.latestTime() + oneHour;
+		releaseBefore = releaseAfter + oneHour;
 		token = await Token.new(signer);
-		factory = await TokenHolderFactory.new(token.address, signer, releaseAfter);
+		factory = await TokenHolderFactory.new(token.address, signer, releaseAfter, releaseBefore);
 	});
 
 	it("should be initialized correctly", async function() {

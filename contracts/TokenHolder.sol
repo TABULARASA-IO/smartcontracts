@@ -10,9 +10,11 @@ contract TokenHolder {
     address public signer;
 
     uint256 public releaseAfter;
+    uint256 public releaseBefore;
 
     modifier checkTime() {
         require(now >= releaseAfter);
+        require(now <= releaseBefore);
         _;
     }
 
@@ -33,16 +35,18 @@ contract TokenHolder {
         _;
     }
 
-    function TokenHolder(address _token, address _signer, address _beneficiary, uint256 _releaseAfter) {
+    function TokenHolder(address _token, address _signer, address _beneficiary, uint256 _releaseAfter, uint256 _releaseBefore) {
         require(_token != 0x0);
         require(_beneficiary != 0x0);
         require(_signer != 0x0);
         require(_releaseAfter > now);
+        require(_releaseBefore > _releaseAfter);
 
         token = Token(_token);
         beneficiary = _beneficiary;
         signer = _signer;
         releaseAfter = _releaseAfter;
+        releaseBefore = _releaseBefore;
     }
 
     function release(bytes signature)
