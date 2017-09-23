@@ -43,9 +43,9 @@ contract ICO is Crowdsale {
         factory = TokenHolderFactory(_factory);
     }
 
-    function buyTokens() payable {
-        require(validPayment());
-
+    function buyTokens() payable
+        withinPeriod withinCap nonZeroPurchase
+    {
       uint256 weiAmount = msg.value;
 
       uint256 tokens = weiAmount.mul(rate);

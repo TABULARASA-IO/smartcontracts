@@ -1,24 +1,17 @@
 const CrowdsaleMock = artifacts.require('./CrowdsaleMock.sol');
 const Token = artifacts.require('./Token.sol');
 
-const BigNumber = web3.BigNumber;
-const chai = require('chai');
-chai.use(require('chai-as-promised'));
-chai.use(require('chai-bignumber')(BigNumber));
-const expect = chai.expect;
-
-const h = require('../scripts/helper_functions.js');
-const ether = h.ether;
-const getBalance = h.getBalance;
-const expectInvalidOpcode = h.expectInvalidOpcode;
-const inBaseUnits = h.inBaseUnits(18);
-
-
+const utils = require('./utils.js');
+const expect = utils.expect;
+const inBaseUnits = utils.inBaseUnits(18);
+const ether = utils.ether;
+const getBalance = utils.getBalance;
+const expectInvalidOpcode = utils.expectInvalidOpcode;
 
 contract('Crowdsale', function([_, investor, anotherInvestor, hacker, wallet]) {
 	const investment = ether(1);
-	const units = h.inBaseUnits(1);
-	const cap = ether(10);
+	const units = inBaseUnits(1);
+	const cap = ether(2);
 
 	let token;
 	let crowdsale;
@@ -30,11 +23,11 @@ contract('Crowdsale', function([_, investor, anotherInvestor, hacker, wallet]) {
 	let afterEndTime;
 
 	before(async function() {
-		await h.advanceBlock();
+		await utils.advanceBlock();
 	});
 
 	beforeEach(async function() {
-		startTime = h.latestTime() + oneDay;
+		startTime = utils.latestTime() + oneDay;
 		endTime = startTime + oneDay;
 		afterEndTime = endTime + oneHour;
 
@@ -43,44 +36,45 @@ contract('Crowdsale', function([_, investor, anotherInvestor, hacker, wallet]) {
 		crowdsale = await CrowdsaleMock.new(startTime, endTime, cap, wallet);
 	});
 
-	describe("Initialization", function() {
-		it("should be constructed correctly", async function() {
-			expect(await crowdsale.startTime()).to.be.bignumber.equal(startTime);
-			expect(await crowdsale.endTime()).to.be.bignumber.equal(endTime);
-			expect(await crowdsale.wallet()).to.be.equal(wallet);
-			expect(await crowdsale.cap()).to.be.bignumber.equal(cap);
-		});
+	it("should be constructed correctly", async function() {
+		expect(await crowdsale.startTime()).to.be.bignumber.equal(startTime);
+		expect(await crowdsale.endTime()).to.be.bignumber.equal(endTime);
+		expect(await crowdsale.wallet()).to.be.equal(wallet);
+		expect(await crowdsale.cap()).to.be.bignumber.equal(cap);
 	});
 
-	describe("accept payments", function() {
-		it("should accept payments in etherum", async function() {
-			await h.setTime(startTime);
+	it("should accept payments in etherum", async function() {
+		await utils.setTime(startTime);
 
-			expect(crowdsale.buyTokens({value: investment, from: investor})).to.be.eventually.fulfilled;
-		});
-
-		it("should fail to accept payments before start", async function() {
-			expectInvalidOpcode(crowdsale.buyTokens({value: investment, from: investor}));
-		});
-
-		it("should fail to accept payments after end", async function() {
-			await h.setTime(afterEndTime);
-
-			expectInvalidOpcode(crowdsale.buyTokens({value: investment, from: investor}));
-		});
-
-		it("should fail to accept direct payments", async function() {
-			await h.setTime(startTime);
-
-			expectInvalidOpcode(crowdsale.sendTransaction({value: investment, from: investor}));
-		});
+		expect(crowdsale.buyTokens({value: investment, from: investor})).to.be.eventually.fulfilled;
 	});
 
-	describe("validate payments", function() {
-		it("should allow correct payments");
-		it("should disallow payments before begin");
-		it("should disallow payments after begin");
-		it("should disallow zero payments");
-		it("should diallow overcap payments");
+	it("should fail to accept payments before start", async function() {
+		await expectInvalidOpcode(crowdsale.buyTokens({value: investment, from: investor}));
+	});
+
+	it("should fail to accept payments after end", async function() {
+		await utils.setTime(afterEndTime);
+
+		await expectInvalidOpcode(crowdsale.buyTokens({value: investment, from: investor}));
+	});
+
+	it("should fail to accept direct payments", async function() {
+		await utils.setTime(startTime);
+
+		await expectInvalidOpcode(crowdsale.sendTransaction({value: investment, from: investor}));
+	});
+
+	it("should fail to accept zero payments", async function() {
+		await expectInvalidOpcode(crowdsale.buyTokens({value: 0, from: investor}));
+	});
+
+	it("should fail to accept over cap payments", async function() {
+		await utils.setTime(startTime);
+
+		await expectInvalidOpcode(crowdsale.buyTokens({value: cap.plus(1), from: investor}));
+
+		await expect(crowdsale.buyTokens({value: cap, from: investor})).to.be.eventually.fulfilled;
+		await expectInvalidOpcode(crowdsale.buyTokens({value: 1, from: investor}));
 	});
 });

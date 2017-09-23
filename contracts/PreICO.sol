@@ -21,9 +21,9 @@ contract PreICO is Crowdsale {
         factory = TokenHolderFactory(_factory);
     }
 
-    function buyTokens() public payable {
-        require(validPayment());
-
+    function buyTokens() public payable
+        withinPeriod withinCap nonZeroPurchase
+    {
         uint256 weiAmount = msg.value;
 
         uint256 rate = getRate();

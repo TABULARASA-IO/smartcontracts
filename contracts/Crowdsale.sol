@@ -32,16 +32,24 @@ contract Crowdsale {
         wallet.transfer(msg.value);
     }
 
-    function() payable {
-        throw;
+    modifier withinPeriod() {
+        require(now >= startTime && now <= endTime);
+        _;
     }
 
-    function validPayment() internal constant returns (bool) {
-        bool withinPeriod = now >= startTime && now <= endTime;
-        bool nonZeroPurchase = msg.value != 0;
-        bool withinCap = weiRaised.add(msg.value) <= cap;
-        return withinPeriod && nonZeroPurchase && withinCap;
+    modifier withinCap() {
+        require(weiRaised.add(msg.value) <= cap);
+        _;
+    }
+
+    modifier nonZeroPurchase() {
+        require(msg.value != 0);
+        _;
     }
 
     function buyTokens() public payable;
+
+    function() payable {
+        throw;
+    }
 }

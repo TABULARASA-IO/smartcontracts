@@ -17,8 +17,9 @@ contract PrivatePreICO is Crowdsale, Ownable {
         token = Token(_token);
     }
 
-    function buyTokens() public payable {
-        require(validPayment());
+    function buyTokens() public payable
+        withinPeriod withinCap nonZeroPurchase
+    {
         require(isMember(msg.sender));
 
         uint256 amount = msg.value;

@@ -1,16 +1,12 @@
 const PrivatePreICO = artifacts.require('./PrivatePreICO.sol');
 const Token = artifacts.require('./Token.sol');
 
-const BigNumber = web3.BigNumber;
-const chai = require('chai');
-chai.use(require('chai-as-promised'));
-chai.use(require('chai-bignumber')(BigNumber));
-const expect = chai.expect;
-
-const h = require('../scripts/helper_functions.js');
-const ether = h.ether;
-const getBalance = h.getBalance;
-const expectInvalidOpcode = h.expectInvalidOpcode;
+const utils = require('./utils.js');
+const expect = utils.expect;
+const inBaseUnits = utils.inBaseUnits(18);
+const ether = utils.ether;
+const getBalance = utils.getBalance;
+const expectInvalidOpcode = utils.expectInvalidOpcode;
 
 contract("PrivatePreICO", async function([_, wallet, kown, investor, hacker]) {
 	const investment = ether(1);
@@ -19,7 +15,7 @@ contract("PrivatePreICO", async function([_, wallet, kown, investor, hacker]) {
 	const oneDay = 3600;
 
 	beforeEach(async function() {
-		this.startTime = h.latestTime() + oneDay;
+		this.startTime = utils.latestTime() + oneDay;
 		this.endTime = this.startTime + oneDay;
 
 		this.token = await Token.new();
@@ -54,11 +50,11 @@ contract("PrivatePreICO", async function([_, wallet, kown, investor, hacker]) {
 	});
 
 	it("should fail to add member by hacker", async function() {
-		expectInvalidOpcode(this.crowdsale.addMember(investor), { from: hacker });
+		await expectInvalidOpcode(this.crowdsale.addMember(investor), { from: hacker });
 	});
 
 	it("should sell tokens with constant price", async function() {
-		await h.setTime(this.startTime);
+		await utils.setTime(this.startTime);
 
 		const expectedBalance = investment.times(await this.crowdsale.getRate());
 		await this.crowdsale.addMember(investor, {from: kown});
@@ -67,8 +63,8 @@ contract("PrivatePreICO", async function([_, wallet, kown, investor, hacker]) {
 	});
 
 	it("should fail to sell tokens for not-whitelisted senders", async function() {
-		await h.setTime(this.startTime);
+		await utils.setTime(this.startTime);
 
-		expectInvalidOpcode(this.crowdsale.buyTokens({from: hacker, value: investment}));
+		await expectInvalidOpcode(this.crowdsale.buyTokens({from: hacker, value: investment}));
 	});
 });

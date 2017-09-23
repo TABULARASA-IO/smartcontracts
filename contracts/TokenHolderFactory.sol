@@ -12,6 +12,8 @@ contract TokenHolderFactory is Ownable {
     uint256 releaseAfter;
     uint256 releaseBefore;
 
+    event TokenHolderCreated(address beneficiary, address account);
+
     function TokenHolderFactory(address _token, address _signer, uint256 _releaseAfter, uint256 _releaseBefore) {
         require(_signer != 0x0);
         require(_token != 0x0);
@@ -40,6 +42,8 @@ contract TokenHolderFactory is Ownable {
             releaseBefore
         );
         lockedAccounts[_beneficiary] = account;
+
+        TokenHolderCreated(_beneficiary, account);
 
         return account;
     }

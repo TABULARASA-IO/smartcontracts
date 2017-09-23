@@ -1,17 +1,12 @@
 const Token = artifacts.require('./Token.sol');
 const TokenHolderFactory = artifacts.require('./TokenHolderFactory.sol');
 
-const BigNumber = web3.BigNumber;
-const chai = require('chai');
-chai.use(require('chai-as-promised'));
-chai.use(require('chai-bignumber')(BigNumber));
-const expect = chai.expect;
-
-const h = require('../scripts/helper_functions.js');
-const ether = h.ether;
-const getBalance = h.getBalance;
-const expectInvalidOpcode = h.expectInvalidOpcode;
-const inBaseUnits = h.inBaseUnits(18);
+const utils = require('./utils.js');
+const expect = utils.expect;
+const inBaseUnits = utils.inBaseUnits(18);
+const ether = utils.ether;
+const getBalance = utils.getBalance;
+const expectInvalidOpcode = utils.expectInvalidOpcode;
 
 const sha3 = require('solidity-sha3').default;
 
@@ -23,7 +18,7 @@ contract("TokenHolderFactory", async function([_, signer, investor, anotherInves
 	let releaseAfter;
 
 	beforeEach(async function() {
-		releaseAfter = h.latestTime() + oneHour;
+		releaseAfter = utils.latestTime() + oneHour;
 		releaseBefore = releaseAfter + oneHour;
 		token = await Token.new(signer);
 		factory = await TokenHolderFactory.new(token.address, signer, releaseAfter, releaseBefore);
@@ -40,7 +35,7 @@ contract("TokenHolderFactory", async function([_, signer, investor, anotherInves
 	});
 
 	it("should fail to create token holder by non-owner transaction", async function() {
-		expectInvalidOpcode(factory.createTokenHolder(investor, {from: investor}));
+		await expectInvalidOpcode(factory.createTokenHolder(investor, {from: investor}));
 	});
 
 	it("should create token holder only once per one beneficiary", async function() {

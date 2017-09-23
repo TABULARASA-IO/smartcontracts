@@ -1,15 +1,12 @@
 const Token = artifacts.require('./Token.sol');
 const TokenHolder = artifacts.require('./TokenHolder.sol');
 
-const BigNumber = web3.BigNumber;
-const chai = require('chai');
-chai.use(require('chai-as-promised'));
-chai.use(require('chai-bignumber')(BigNumber));
-const expect = chai.expect;
-
-const h = require('../scripts/helper_functions.js');
-const expectInvalidOpcode = h.expectInvalidOpcode;
-const inBaseUnits = h.inBaseUnits(18);
+const utils = require('./utils.js');
+const expect = utils.expect;
+const inBaseUnits = utils.inBaseUnits(18);
+const ether = utils.ether;
+const getBalance = utils.getBalance;
+const expectInvalidOpcode = utils.expectInvalidOpcode;
 
 const sha3 = require('solidity-sha3').default;
 
@@ -28,11 +25,11 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 	const wrongSignature = web3.eth.sign(signer, sha3(beneficiary));
 
 	before(async function() {
-		await h.advanceBlock();
+		await utils.advanceBlock();
 	});
 
 	beforeEach(async function() {
-		releaseAfter = h.latestTime() + oneHour;
+		releaseAfter = utils.latestTime() + oneHour;
 		releaseBefore = releaseAfter + oneHour;
 		token = await Token.new();
 		tokenAddress = token.address;
@@ -58,7 +55,7 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 
 	it("should release tokens to beneficiary", async function() {
 		await token.mint(tokenHolderAddress, units);
-		await h.setTime(releaseAfter);
+		await utils.setTime(releaseAfter);
 		await tokenHolder.release(signature, {from: beneficiary});
 
 		expect(await token.balanceOf(tokenHolderAddress)).to.be.bignumber.equal(0);
@@ -67,32 +64,32 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 
 	it("should fail to release tokens by holder with zero balance", async function() {
 		await token.mint(tokenHolderAddress, units);
-		await h.setTime(releaseAfter);
+		await utils.setTime(releaseAfter);
 		await tokenHolder.release(signature, {from: beneficiary});
 
-		expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
+		await expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
 	});
 	it("should fail to release tokens before release time", async function() {
 		await token.mint(tokenHolderAddress, units);
 
-		expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
+		await expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
 	});
 	it("should fail to release tokens with invalid signature", async function() {
 		await token.mint(tokenHolderAddress, units);
-		await h.setTime(releaseAfter);
+		await utils.setTime(releaseAfter);
 
-		expectInvalidOpcode(tokenHolder.release(wrongSignature, {from: beneficiary}));
+		await expectInvalidOpcode(tokenHolder.release(wrongSignature, {from: beneficiary}));
 	});
 	it("should fail to release tokens with signature from different account", async function() {
 		const anotherTokenHolder = await TokenHolder.new(tokenAddress, signer, beneficiary, releaseAfter, releaseBefore);
-		await h.setTime(releaseAfter);
+		await utils.setTime(releaseAfter);
 
-		expectInvalidOpcode(anotherTokenHolder.release(signature, {from: beneficiary}));
+		await expectInvalidOpcode(anotherTokenHolder.release(signature, {from: beneficiary}));
 	});
 	it("should fail to release tokens after release time", async function() {
 		await token.mint(tokenHolderAddress, units);
-		await h.setTime(releaseBefore + 1);
+		await utils.setTime(releaseBefore + 1);
 
-		expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
+		await expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
 	});
 });

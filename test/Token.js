@@ -1,16 +1,11 @@
 const Token = artifacts.require('./Token.sol');
 
-const BigNumber = web3.BigNumber;
-const chai = require('chai');
-chai.use(require('chai-as-promised'));
-chai.use(require('chai-bignumber')(BigNumber));
-const expect = chai.expect;
-
-const h = require('../scripts/helper_functions.js');
-const ether = h.ether;
-const getBalance = h.getBalance;
-const expectInvalidOpcode = h.expectInvalidOpcode;
-const inBaseUnits = h.inBaseUnits(18);
+const utils = require('./utils.js');
+const expect = utils.expect;
+const inBaseUnits = utils.inBaseUnits(18);
+const ether = utils.ether;
+const getBalance = utils.getBalance;
+const expectInvalidOpcode = utils.expectInvalidOpcode;
 
 const sha3 = require('solidity-sha3').default;
 
@@ -19,8 +14,6 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
 
     const investment = ether(1);
     const units = inBaseUnits(1);
-
-    console.log(sha3(investor));
 
     beforeEach(async function() {
         token = await Token.new();
@@ -40,7 +33,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     });
 
     it("should not accept payments", async function() {
-        expectInvalidOpcode(token.send(investment));
+        await expectInvalidOpcode(token.send(investment));
     });
 
     it("should mint tokens by owner transaction", async function() {
@@ -57,7 +50,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     it("should fail to mint tokens after minting is finished", async function() {
         await token.finishMinting();
 
-        expectInvalidOpcode(token.mint(investor, units, {from: investor}));
+        await expectInvalidOpcode(token.mint(investor, units, {from: investor}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
 
@@ -67,7 +60,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
        expect(await token.paused()).to.be.false;
     });
     it("should fail to enable transfers by non-owner transaction", async function() {
-        expectInvalidOpcode(token.unpause({from: hacker}));
+        await expectInvalidOpcode(token.unpause({from: hacker}));
         expect(await token.paused()).to.be.true;
     });
 
@@ -82,7 +75,7 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     it("should fail to transfer tokens when transfers are disabled", async function() {
         await token.mint(investor, units);
 
-        expectInvalidOpcode(token.transfer(anotherInvestor, units, {from: investor}));
+        await expectInvalidOpcode(token.transfer(anotherInvestor, units, {from: investor}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);
         expect(await token.balanceOf(anotherInvestor)).to.be.bignumber.equal(0);
     });
@@ -96,11 +89,11 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
         expect(await token.balanceOf(anotherInvestor)).to.be.bignumber.equal(units);
     });
-    it("should fail to transfer tokens from another accounts when transfers are disabled", async function() {
+    it("should fail to transfer tokens from another account when transfers are disabled", async function() {
         await token.mint(investor, units);
         await token.approve(anotherInvestor, units, {from: anotherInvestor});
 
-        expectInvalidOpcode(token.transferFrom(investor, anotherInvestor, units, {from: investor}));
+        await expectInvalidOpcode(token.transferFrom(investor, anotherInvestor, units, {from: investor}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(units);
         expect(await token.balanceOf(anotherInvestor)).to.be.bignumber.equal(0);
     });

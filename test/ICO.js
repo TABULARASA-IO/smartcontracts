@@ -2,20 +2,16 @@ const Token = artifacts.require('./Token.sol');
 const Crowdsale = artifacts.require('./ICO.sol');
 const TokenHolderFactory = artifacts.require('./TokenHolderFactory.sol');
 
-const BigNumber = web3.BigNumber;
-const chai = require('chai');
-chai.use(require('chai-as-promised'));
-chai.use(require('chai-bignumber')(BigNumber));
-const expect = chai.expect;
+const utils = require('./utils.js');
+const expect = utils.expect;
+const inBaseUnits = utils.inBaseUnits(18);
+const ether = utils.ether;
+const getBalance = utils.getBalance;
+const expectInvalidOpcode = utils.expectInvalidOpcode;
 
-const h = require('../scripts/helper_functions.js');
-const ether = h.ether;
-const getBalance = h.getBalance;
-const expectInvalidOpcode = h.expectInvalidOpcode;
-const inBaseUnits = h.inBaseUnits(18);
+const BigNumber = web3.BigNumber;
 
 contract("ICO", async function([_, kown, wallet, investor]) {
-    const limitBeforeAML = inBaseUnits(100);
     const investment = ether(1);
     const rate = new BigNumber(10);
     const cap = ether(10);
@@ -37,28 +33,29 @@ contract("ICO", async function([_, kown, wallet, investor]) {
     let crowdsale;
 
     before(async function() {
-        await h.advanceBlock();
+        await utils.advanceBlock();
     })
 
     beforeEach(async function() {
-        startTime = h.latestTime() + oneDay;
+        startTime = utils.latestTime() + oneDay;
         endTime = startTime + oneDay;
         afterEndTime = endTime + 1;
 
-        token = await Token.new(kown, limitBeforeAML);
-        crowdsale = await Crowdsale.new(
-            startTime,
-            endTime,
-            rate,
-            cap,
-            wallet,
-            stageBonus,
-            firstHourBonus
-        );
+	    crowdsale = await Crowdsale.new(
+		    startTime,
+		    endTime,
+		    rate,
+		    cap,
+		    wallet,
+		    stageBonus,
+		    firstHourBonus
+	    );
+
+        token = await Token.new();
         await token.transferOwnership(crowdsale.address);
         await crowdsale.setToken(token.address);
 
-	    const factory = await TokenHolderFactory.new(token.address, kown, endTime);
+	    const factory = await TokenHolderFactory.new(token.address, kown, endTime, afterEndTime);
 	    await factory.transferOwnership(crowdsale.address);
 	    await crowdsale.setTokenHolderFactory(factory.address);
     });
@@ -79,7 +76,7 @@ contract("ICO", async function([_, kown, wallet, investor]) {
     });
 
     it("should accept payments in etherum", async function() {
-        await h.setTime(startTime);
+        await utils.setTime(startTime);
 
         const walletBalanceBefore = getBalance(wallet);
         const investorBalanceBefore = getBalance(investor);
@@ -99,7 +96,7 @@ contract("ICO", async function([_, kown, wallet, investor]) {
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
     it("should mint less tokens after one hour", async function() {
-        await h.setTime(startTime+oneHour);
+        await utils.setTime(startTime+oneHour);
 
         const tx = await crowdsale.buyTokens({value: investment, from: investor});
 
@@ -110,24 +107,12 @@ contract("ICO", async function([_, kown, wallet, investor]) {
         expect(await token.totalSupply()).to.be.bignumber.equal(expectedSupplyForInvestment);
     });
     it("should fail to accept payments before start", async function() {
-        expectInvalidOpcode(crowdsale.buyTokens({value: investment, from: investor}));
+        await expectInvalidOpcode(crowdsale.buyTokens({value: investment, from: investor}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
     });
     it("should fail to accept payments after end", async function() {
-        await h.setTime(afterEndTime);
-        expectInvalidOpcode(crowdsale.buyTokens({value: investment, from: investor}));
+        await utils.setTime(afterEndTime);
+        await expectInvalidOpcode(crowdsale.buyTokens({value: investment, from: investor}));
         expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
-    });
-
-    it("should fail to exceed cap", async function() {
-        await h.setTime(startTime);
-        expectInvalidOpcode(crowdsale.buyTokens({value: cap.plus(1), from: investor}));
-        expect(crowdsale.buyTokens({value: cap.minus(1), from: investor})).to.be.eventually.fulfilled;
-        expectInvalidOpcode(crowdsale.buyTokens({value: 2, from: investor}));
-    });
-
-    it("should fail to process payments directly", async function() {
-       await h.setTime(startTime);
-       expectInvalidOpcode(crowdsale.sendTransaction({value: investment, from: investor}));
     });
 });
