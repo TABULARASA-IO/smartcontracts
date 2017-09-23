@@ -24,10 +24,8 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 	const oneHour = 3600;
 	let releaseAfter;
 
-	const salt = "presaleholder";
-
-	const signature = web3.eth.sign(signer, sha3(beneficiary));
-	const saltedSignature = web3.eth.sign(beneficiary, sha3(beneficiary.concat(salt)));
+	let signature;
+	const wrongSignature = web3.eth.sign(signer, sha3(beneficiary));
 
 	before(async function() {
 		await h.advanceBlock();
@@ -36,10 +34,12 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 	beforeEach(async function() {
 		releaseAfter = h.latestTime() + oneHour;
 		releaseBefore = releaseAfter + oneHour;
-		token = await Token.new(signer);
+		token = await Token.new();
 		tokenAddress = token.address;
 		tokenHolder = await TokenHolder.new(tokenAddress, signer, beneficiary, releaseAfter, releaseBefore);
 		tokenHolderAddress = tokenHolder.address;
+
+		signature = web3.eth.sign(signer, sha3(tokenHolderAddress));
 	});
 
 	it("should be initialized correctly", async function() {
@@ -77,20 +77,22 @@ contract("TokenHolder", async function([_, signer, beneficiary]) {
 
 		expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
 	});
-	it("should fail to release tokens after release time", async function() {
-		await token.mint(tokenHolderAddress, units);
-		await h.setTime(releaseBefore);
-
-		expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
-	});
 	it("should fail to release tokens with invalid signature", async function() {
 		await token.mint(tokenHolderAddress, units);
-		await h.setTime(releaseBefore);
+		await h.setTime(releaseAfter);
 
-		expectInvalidOpcode(tokenHolder.release(saltedSignature, {from: beneficiary}));
+		expectInvalidOpcode(tokenHolder.release(wrongSignature, {from: beneficiary}));
 	});
+	it("should fail to release tokens with signature from different account", async function() {
+		const anotherTokenHolder = await TokenHolder.new(tokenAddress, signer, beneficiary, releaseAfter, releaseBefore);
+		await h.setTime(releaseAfter);
 
-	it("should fail to receive payments", async function() {
-		expectInvalidOpcode(tokenHolder.send(1));
+		expectInvalidOpcode(anotherTokenHolder.release(signature, {from: beneficiary}));
+	});
+	it("should fail to release tokens after release time", async function() {
+		await token.mint(tokenHolderAddress, units);
+		await h.setTime(releaseBefore + 1);
+
+		expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
 	});
 });

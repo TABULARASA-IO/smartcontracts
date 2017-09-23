@@ -20,14 +20,10 @@ contract("Token", async function([_, kown, investor, anotherInvestor, hacker]) {
     const investment = ether(1);
     const units = inBaseUnits(1);
 
-    // We should correspond signature to investor when he is ready to activate tokens
-    const signature = web3.eth.sign(kown, sha3(investor));
-    const invalidSignature = web3.eth.sign(investor, sha3(investor));
-
     console.log(sha3(investor));
 
     beforeEach(async function() {
-        token = await Token.new(kown);
+        token = await Token.new();
         await token.pause();
     });
 

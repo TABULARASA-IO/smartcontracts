@@ -20,7 +20,7 @@ contract TokenHolder {
 
     modifier checkSignature(bytes signature) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 hash = keccak256(prefix, sha3(beneficiary));
+        bytes32 hash = keccak256(prefix, sha3(address(this)));
         require(ECRecovery.recover(hash, signature) == signer);
         _;
     }
