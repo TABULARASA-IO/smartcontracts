@@ -1,4 +1,3 @@
-const Crowdsale = artifacts.require('./ICO.sol');
 const PreICO = artifacts.require('./PreICO.sol');
 const TokenHolderFactory = artifacts.require('./TokenHolderFactory.sol');
 const Token = artifacts.require('./Token.sol');
@@ -13,16 +12,17 @@ const expectInvalidOpcode = utils.expectInvalidOpcode;
 contract("PreICO", async function([_, wallet, investor, signer]) {
 	const investment = ether(1);
 	const cap = ether(10);
-
 	const oneDay = 3600;
+
+	let coinsPerEth = 10;
 
 	let startTime;
 	let endTime;
 	let token;
 	let crowdsale;
 	let factory;
-	let rate;
 	let unitsPerInvestment;
+	let rate;
 
 	beforeEach(async function() {
 		startTime = utils.latestTime() + oneDay;
@@ -31,9 +31,12 @@ contract("PreICO", async function([_, wallet, investor, signer]) {
 		token = await Token.new();
 		factory = await TokenHolderFactory.new(token.address, signer, endTime, endTime + oneDay);
 		crowdsale = await PreICO.new(startTime, endTime, cap, wallet, token.address, factory.address);
+
 		await token.transferOwnership(crowdsale.address);
 		await factory.transferOwnership(crowdsale.address);
-		rate = await crowdsale.getRate();
+		await crowdsale.updateCoinsPerEth(coinsPerEth);
+
+		rate = await crowdsale.getEthRate();
 		unitsPerInvestment = investment.times(rate);
 	});
 
@@ -46,21 +49,14 @@ contract("PreICO", async function([_, wallet, investor, signer]) {
 	});
 
 	it("should have constant price", async function() {
-		expect(await crowdsale.getRate()).to.be.bignumber.equal(rate);
-	});
-
-	it("should increase amount in wei", async function() {
-		await utils.setTime(startTime);
-		await crowdsale.buyTokens({value: investment, from: investor});
-
-		expect(await crowdsale.weiRaised()).to.be.bignumber.equal(investment);
+		expect(await crowdsale.getEthRate()).to.be.bignumber.equal(rate);
 	});
 
 	it("should increase balance of locked account", async function() {
 		await utils.setTime(startTime);
 
 		const tx = await crowdsale.buyTokens({value: investment, from: investor});
-		const account = tx.logs[0].args.lockedAccount;
+		const account = tx.logs[0].args.account;
 
 		expect(await token.balanceOf(account)).to.be.bignumber.equal(unitsPerInvestment);
 		expect(await token.balanceOf(investor)).to.be.bignumber.equal(0);
@@ -79,9 +75,5 @@ contract("PreICO", async function([_, wallet, investor, signer]) {
 
 		expect(walletBalanceAfter).to.be.bignumber.above(walletBalanceBefore);
 		expect(investorBalanceAfter).to.be.bignumber.below(investorBalanceBefore);
-	});
-
-	it("should fail to receive payments before start", async function() {
-		await expectInvalidOpcode(crowdsale.buyTokens({value: investment, from: investor}));
 	});
 });

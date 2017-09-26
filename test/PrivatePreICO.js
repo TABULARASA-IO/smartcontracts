@@ -56,7 +56,7 @@ contract("PrivatePreICO", async function([_, wallet, kown, investor, hacker]) {
 	it("should sell tokens with constant price", async function() {
 		await utils.setTime(this.startTime);
 
-		const expectedBalance = investment.times(await this.crowdsale.getRate());
+		const expectedBalance = investment.times(await this.crowdsale.getEthRate());
 		await this.crowdsale.addMember(investor, {from: kown});
 		await this.crowdsale.buyTokens({from: investor, value: investment});
 		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(expectedBalance);

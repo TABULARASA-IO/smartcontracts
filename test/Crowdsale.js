@@ -10,8 +10,9 @@ const expectInvalidOpcode = utils.expectInvalidOpcode;
 
 contract('Crowdsale', function([_, investor, anotherInvestor, hacker, wallet]) {
 	const investment = ether(1);
+	const coinsPerEth = 10;
 	const units = inBaseUnits(1);
-	const cap = ether(2);
+	const weiCap = ether(2);
 
 	let token;
 	let crowdsale;
@@ -21,7 +22,8 @@ contract('Crowdsale', function([_, investor, anotherInvestor, hacker, wallet]) {
 	let startTime;
 	let endTime;
 	let afterEndTime;
-
+	let unitsPerInvestment;
+	
 	before(async function() {
 		await utils.advanceBlock();
 	});
@@ -32,21 +34,41 @@ contract('Crowdsale', function([_, investor, anotherInvestor, hacker, wallet]) {
 		afterEndTime = endTime + oneHour;
 
 		token = await Token.new();
+		crowdsale = await CrowdsaleMock.new(startTime, endTime, weiCap, wallet, token.address);
 
-		crowdsale = await CrowdsaleMock.new(startTime, endTime, cap, wallet);
+		await token.transferOwnership(crowdsale.address);
+		await crowdsale.updateCoinsPerEth(coinsPerEth);
+		unitsPerInvestment = investment.times(await crowdsale.getEthRate());
 	});
 
 	it("should be constructed correctly", async function() {
 		expect(await crowdsale.startTime()).to.be.bignumber.equal(startTime);
 		expect(await crowdsale.endTime()).to.be.bignumber.equal(endTime);
 		expect(await crowdsale.wallet()).to.be.equal(wallet);
-		expect(await crowdsale.cap()).to.be.bignumber.equal(cap);
+		expect(await crowdsale.weiCap()).to.be.bignumber.equal(weiCap);
 	});
 
-	it("should accept payments in etherum", async function() {
+	it("should accept payments in eth", async function() {
 		await utils.setTime(startTime);
 
-		expect(crowdsale.buyTokens({value: investment, from: investor})).to.be.eventually.fulfilled;
+		const walletBalanceBefore = await getBalance(wallet);
+		const investorBalanceBefore = await getBalance(investor);
+
+		const tx = await crowdsale.buyTokens({value: investment, from: investor});
+		const account = tx.logs[0].args.account;
+
+		const walletBalanceAfter = await getBalance(wallet);
+		const investorBalanceAfter = await getBalance(investor);
+
+		// increase amount in wei
+		expect(await crowdsale.weiRaised()).to.be.bignumber.equal(investment);
+
+		// increase balance of account
+		expect(await token.balanceOf(account)).to.be.bignumber.equal(unitsPerInvestment);
+
+		// forward funds to owner
+		expect(walletBalanceAfter).to.be.bignumber.above(walletBalanceBefore);
+		expect(investorBalanceAfter).to.be.bignumber.below(investorBalanceBefore);
 	});
 
 	it("should fail to accept payments before start", async function() {
@@ -72,9 +94,9 @@ contract('Crowdsale', function([_, investor, anotherInvestor, hacker, wallet]) {
 	it("should fail to accept over cap payments", async function() {
 		await utils.setTime(startTime);
 
-		await expectInvalidOpcode(crowdsale.buyTokens({value: cap.plus(1), from: investor}));
+		await expectInvalidOpcode(crowdsale.buyTokens({value: weiCap.plus(1), from: investor}));
 
-		await expect(crowdsale.buyTokens({value: cap, from: investor})).to.be.eventually.fulfilled;
+		await expect(crowdsale.buyTokens({value: weiCap, from: investor})).to.be.eventually.fulfilled;
 		await expectInvalidOpcode(crowdsale.buyTokens({value: 1, from: investor}));
 	});
 });

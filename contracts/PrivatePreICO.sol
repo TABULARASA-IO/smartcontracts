@@ -4,33 +4,20 @@ import './Token.sol';
 import './Crowdsale.sol';
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 
-contract PrivatePreICO is Crowdsale, Ownable {
+contract PrivatePreICO is Crowdsale {
     Token public token;
     mapping(address => bool) public whitelist;
 
     event MemberAdded(address member);
 
-    function PrivatePreICO(uint256 _startTime, uint256 _endTime, uint256 _cap, address wallet, address _token)
-        Crowdsale(_startTime, _endTime, _cap, wallet)
+    function PrivatePreICO(uint256 _startTime, uint256 _endTime, uint256 _cap, address _wallet, address _token)
+        Crowdsale(_startTime, _endTime, _cap, _wallet, _token)
     {
-        require(_token != 0x0);
-        token = Token(_token);
     }
 
-    function buyTokens() public payable
-        withinPeriod withinCap nonZeroPurchase
-    {
-        require(isMember(msg.sender));
-
-        uint256 amount = msg.value;
-        uint256 rate = getRate();
-        uint256 tokens = amount.mul(rate);
-
-        token.mint(msg.sender, tokens);
-    }
-
-    function getRate() constant public returns(uint256) {
-        return 10**uint256(token.decimals());
+    function issueCoins(address beneficiary, uint256 amount) internal returns(address) {
+        token.mint(beneficiary, amount);
+        return beneficiary;
     }
 
     function addMember(address _member) onlyOwner {
@@ -40,5 +27,10 @@ contract PrivatePreICO is Crowdsale, Ownable {
 
     function isMember(address _investor) public constant returns(bool) {
         return whitelist[_investor];
+    }
+
+    // @override Crowdsale.validEthPurchase()
+    function validEthPurchase() internal constant returns (bool) {
+        return super.validEthPurchase() && isMember(msg.sender);
     }
 }
