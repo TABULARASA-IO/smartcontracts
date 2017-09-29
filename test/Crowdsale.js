@@ -1,5 +1,6 @@
 const CrowdsaleMock = artifacts.require('./CrowdsaleMock.sol');
 const Token = artifacts.require('./Token.sol');
+const Relay = artifacts.require('./MockBTCRelay.sol');
 
 const utils = require('./utils.js');
 const expect = utils.expect;
@@ -11,11 +12,17 @@ const expectInvalidOpcode = utils.expectInvalidOpcode;
 contract('Crowdsale', function([_, investor, anotherInvestor, hacker, wallet]) {
 	const investment = ether(1);
 	const coinsPerEth = 10;
+	const coinsPerBtc = 10;
 	const units = inBaseUnits(1);
 	const weiCap = ether(2);
+	const btcCap = new web3.BigNumber(100);
+	const bitcoinInvestment = new web3.BigNumber(10);
+	const bitcoinInvestmentOverCap = new web3.BigNumber(btcCap.plus(1));
+	const bitcoinTransactionHash = 0x123;
 
 	let token;
 	let crowdsale;
+	let btcRelay;
 
 	const oneHour = 3600;
 	const oneDay = oneHour * 24;
@@ -23,7 +30,15 @@ contract('Crowdsale', function([_, investor, anotherInvestor, hacker, wallet]) {
 	let endTime;
 	let afterEndTime;
 	let unitsPerInvestment;
-	
+	let unitsPerBitcoinInvestment;
+
+	const btcRelayParams = {
+		rawTransaction: '0x'+Buffer.from("send 10 BTC to $ourBitcoinWallet").toString("hex"),
+		txIndex: 123,
+		merkleProof: [],
+		blockHash: 456
+	};
+
 	before(async function() {
 		await utils.advanceBlock();
 	});
@@ -34,11 +49,16 @@ contract('Crowdsale', function([_, investor, anotherInvestor, hacker, wallet]) {
 		afterEndTime = endTime + oneHour;
 
 		token = await Token.new();
-		crowdsale = await CrowdsaleMock.new(startTime, endTime, weiCap, wallet, token.address);
+		btcRelay = await Relay.new();
+		crowdsale = await CrowdsaleMock.new(startTime, endTime, weiCap, btcCap, wallet, token.address, btcRelay.address);
 
 		await token.transferOwnership(crowdsale.address);
 		await crowdsale.updateCoinsPerEth(coinsPerEth);
+		await crowdsale.updateCoinsPerBtc(coinsPerBtc);
 		unitsPerInvestment = investment.times(await crowdsale.getEthRate());
+		unitsPerBitcoinInvestment = bitcoinInvestment.times(await crowdsale.getBtcRate());
+
+		btcRelayParams.processor = crowdsale.address;
 	});
 
 	it("should be constructed correctly", async function() {
@@ -98,5 +118,20 @@ contract('Crowdsale', function([_, investor, anotherInvestor, hacker, wallet]) {
 
 		await expect(crowdsale.buyTokens({value: weiCap, from: investor})).to.be.eventually.fulfilled;
 		await expectInvalidOpcode(crowdsale.buyTokens({value: 1, from: investor}));
+	});
+
+
+	it("should accept payments in bitcoin", async function() {
+		await utils.setTime(startTime);
+
+		await crowdsale.promise(bitcoinInvestment, { from: investor });
+
+		await crowdsale.claim(bitcoinTransactionHash, { from: investor });
+
+		await btcRelay.relayTx(btcRelayParams.rawTransaction, btcRelayParams.txIndex, btcRelayParams.merkleProof, btcRelayParams.blockHash, btcRelayParams.processor, { from: investor });
+
+		expect(await crowdsale.btcRaised()).to.be.bignumber.equal(bitcoinInvestment);
+
+		expect(await token.balanceOf(investor)).to.be.bignumber.equal(unitsPerBitcoinInvestment);
 	});
 });

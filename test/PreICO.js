@@ -13,6 +13,7 @@ contract("PreICO", async function([_, wallet, investor, signer]) {
 	const investment = ether(1);
 	const cap = ether(10);
 	const oneDay = 3600;
+	const btcCap = 1000;
 
 	let coinsPerEth = 10;
 
@@ -30,7 +31,7 @@ contract("PreICO", async function([_, wallet, investor, signer]) {
 
 		token = await Token.new();
 		factory = await TokenHolderFactory.new(token.address, signer, endTime, endTime + oneDay);
-		crowdsale = await PreICO.new(startTime, endTime, cap, wallet, token.address, factory.address);
+		crowdsale = await PreICO.new(startTime, endTime, cap, btcCap, wallet, token.address, factory.address);
 
 		await token.transferOwnership(crowdsale.address);
 		await factory.transferOwnership(crowdsale.address);

@@ -12,9 +12,11 @@ contract ICO is Crowdsale {
       uint256 _startTime,
       uint256 _endTime,
       uint256 _cap,
+      uint256 _btcCap,
       address _wallet,
       address _token,
-      address _factory) Crowdsale(_startTime, _endTime, _cap, _wallet, _token)
+      address _factory,
+      address _relay) Crowdsale(_startTime, _endTime, _cap, _btcCap, _wallet, _token, _relay)
     {
         factory = TokenHolderFactory(_factory);
     }

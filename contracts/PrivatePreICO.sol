@@ -10,8 +10,8 @@ contract PrivatePreICO is Crowdsale {
 
     event MemberAdded(address member);
 
-    function PrivatePreICO(uint256 _startTime, uint256 _endTime, uint256 _cap, address _wallet, address _token)
-        Crowdsale(_startTime, _endTime, _cap, _wallet, _token)
+    function PrivatePreICO(uint256 _startTime, uint256 _endTime, uint256 _cap, uint256 _btcCap, address _wallet, address _token, address _relay)
+        Crowdsale(_startTime, _endTime, _cap, _btcCap, _wallet, _token, _relay)
     {
     }
 

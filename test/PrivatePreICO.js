@@ -11,7 +11,7 @@ const expectInvalidOpcode = utils.expectInvalidOpcode;
 contract("PrivatePreICO", async function([_, wallet, kown, investor, hacker]) {
 	const investment = ether(1);
 	const cap = ether(10);
-
+	const btcCap = 1000;
 	const oneDay = 3600;
 
 	beforeEach(async function() {
@@ -23,6 +23,7 @@ contract("PrivatePreICO", async function([_, wallet, kown, investor, hacker]) {
 			this.startTime,
 			this.endTime,
 			cap,
+			btcCap,
 			wallet,
 			this.token.address
 		);
