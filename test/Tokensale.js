@@ -42,6 +42,7 @@ contract("Tokensale", function([deployer, wallet, investor, signer, hacker, prox
 		expect(await this.tokensale.endTime()).to.be.bignumber.equal(this.endTime);
 		expect(this.endTime).to.be.bignumber.above(this.startTime);
 
+		expect(await this.tokensale.proxy()).to.be.equal(proxy);
 		expect(await this.tokensale.token()).to.be.equal(this.token.address);
 		expect(await this.tokensale.placeholder()).to.be.equal(this.placeholder.address);
 

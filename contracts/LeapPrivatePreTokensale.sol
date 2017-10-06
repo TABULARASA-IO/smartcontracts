@@ -21,8 +21,13 @@ contract LeapPrivatePreTokensale is Tokensale {
 
     mapping (address => bool) members;
 
+    event NewMember(address _member);
+
     function addMember(address _member) public onlyOwner {
+        require(members[_member] == false);
+
         members[_member] = true;
+        NewMember(_member);
     }
 
     function isMember(address _investor) public constant returns (bool) {
@@ -30,6 +35,6 @@ contract LeapPrivatePreTokensale is Tokensale {
     }
 
     function validPayment(address beneficiary, uint256 amount) public constant returns (bool) {
-        return super.validPayment(beneficiary, amount) && isMember(msg.sender);
+        return super.validPayment(beneficiary, amount) && isMember(beneficiary);
     }
 }

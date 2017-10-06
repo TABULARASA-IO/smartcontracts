@@ -7,8 +7,8 @@ contract LeapTokensale is Tokensale {
         uint256 _startTime,
         address _token,
         address _proxy,
-        address _wallet,
         address _placeholder,
+        address _wallet,
         address _bounty,
         address _team,
         address _ecosystem,
@@ -17,8 +17,9 @@ contract LeapTokensale is Tokensale {
         _startTime,
         _token,
         _proxy,
-        _wallet,
-        _placeholder) {
+        _placeholder,
+        _wallet
+        ) {
 
         bounty = _bounty;
         team = _team;

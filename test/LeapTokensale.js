@@ -1,32 +1,34 @@
 const Tokensale = artifacts.require('LeapTokensale.sol');
-const Token = artifacts.require('Token.sol');
+const Token = artifacts.require('LEAP.sol');
 
-const utils = require('utils');
+const utils = require('./utils');
 const expect = utils.expect;
 
-contract("LeapTokensale", function([_, proxy, wallet, placeholder, bounty, team, ecosystem, reserve]) {
+contract("LeapTokensale", function([_, investor, proxy, wallet, placeholder, bounty, team, ecosystem, reserve]) {
 	const contributorsPercentage = 40;
 	const bountyPercentage = 10;
 	const teamPercentage = 15;
 	const ecosystemPercentage = 15;
 	const reservePercentage = 20;
 
-	const contributorsCoins = percentFromOneBillionCoins(40); // 400m^18
-	const bountyCoins = percentFromOneBillionCoins(10); // 100m^18
-	const teamCoins = percentFromOneBillionCoins(15); // 150m^18
-	const ecosystemCoins = percentFromOneBillionCoins(15); // 150m^18
-	const reserveCoins = percentFromOneBillionCoins(20); // 20m^18
+	const onePercent = 10000000;
 
-	function percentFromOneBillionCoins(n) {
-		return new BigNumber(10).pow(7).mul(n).pow(18);
-	}
+	const contributorsCoins = new web3.BigNumber(onePercent * 40) * new web3.BigNumber(10).pow(18); // 400m^18
+	const bountyCoins = new web3.BigNumber(onePercent * 10) * new web3.BigNumber(10).pow(18);// 100m^18
+	const teamCoins = new web3.BigNumber(onePercent * 15) * new web3.BigNumber(10).pow(18); // 150m^18
+	const ecosystemCoins = new web3.BigNumber(onePercent * 15) * new web3.BigNumber(10).pow(18); // 150m^18
+	const reserveCoins = new web3.BigNumber(onePercent * 20) * new web3.BigNumber(10).pow(18); // 20m^18
+
+	before(async function() {
+		await utils.advanceBlock();
+	});
 
 	beforeEach(async function() {
 		this.token = await Token.new();
 
 		this.tokensale = await Tokensale.new(
-			utils.latestTime(),
-			token, proxy, placeholder, wallet,
+			utils.latestTime() + 3600,
+			this.token.address, proxy, placeholder, wallet,
 			bounty, team, ecosystem, reserve
 		);
 
@@ -59,6 +61,8 @@ contract("LeapTokensale", function([_, proxy, wallet, placeholder, bounty, team,
 	});
 
 	it("should issue bonuses after the end", async function() {
+		await utils.setTime(await this.tokensale.endTime());
+
 		await this.tokensale.finalize();
 
 		expect(await this.token.balanceOf(bounty)).to.be.equal(bountyCoins);
