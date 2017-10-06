@@ -1,95 +1,72 @@
-const Token = artifacts.require('./Token.sol');
 const TokenHolder = artifacts.require('./TokenHolder.sol');
+const Token = artifacts.require('./Token.sol');
 
 const utils = require('./utils.js');
+const baseUnits = utils.inBaseUnits(18);
 const expect = utils.expect;
-const inBaseUnits = utils.inBaseUnits(18);
-const ether = utils.ether;
-const getBalance = utils.getBalance;
-const expectInvalidOpcode = utils.expectInvalidOpcode;
+const expectThrow = utils.expectThrow;
 
 const sha3 = require('solidity-sha3').default;
 
-contract("TokenHolder", async function([_, signer, beneficiary]) {
-	let token;
-	let tokenHolder;
-	let tokenAddress;
-	let tokenHolderAddress;
-
-	const units = inBaseUnits(1);
-
-	const oneHour = 3600;
-	let releaseAfter;
-
-	let signature;
-	const wrongSignature = web3.eth.sign(signer, sha3(beneficiary));
-
-	before(async function() {
-		await utils.advanceBlock();
-	});
+contract("TokenHolder", function([_, investor, signer, hacker]) {
+	const units = baseUnits(10);
 
 	beforeEach(async function() {
-		releaseAfter = utils.latestTime() + oneHour;
-		releaseBefore = releaseAfter + oneHour;
-		token = await Token.new();
-		tokenAddress = token.address;
-		tokenHolder = await TokenHolder.new(tokenAddress, signer, beneficiary, releaseAfter, releaseBefore);
-		tokenHolderAddress = tokenHolder.address;
+		this.releaseStart = utils.latestTime() + 3600;
+		this.releaseEnd = this.releaseStart + 3600;
 
-		signature = web3.eth.sign(signer, sha3(tokenHolderAddress));
+		this.token = await Token.new();
+		this.lockedAccount = await TokenHolder.new(this.token.address, signer, investor, this.releaseStart, this.releaseEnd);
+
+		await this.token.mint(this.lockedAccount.address, units);
+
+		this.signature = web3.eth.sign(signer, sha3(this.lockedAccount.address));
 	});
 
 	it("should be initialized correctly", async function() {
-		expect(await tokenHolder.token()).to.be.equal(tokenAddress);
-		expect(await tokenHolder.beneficiary()).to.be.equal(beneficiary);
-		expect(await tokenHolder.signer()).to.be.equal(signer);
-		expect(await tokenHolder.releaseAfter()).to.be.bignumber.equal(releaseAfter);
+		expect(await this.lockedAccount.token()).to.be.equal(this.token.address);
+		expect(await this.lockedAccount.beneficiary()).to.be.equal(investor);
+		expect(await this.lockedAccount.signer()).to.be.equal(signer);
+		expect(await this.lockedAccount.releaseStart()).to.be.bignumber.equal(this.releaseStart);
+		expect(await this.lockedAccount.releaseEnd()).to.be.bignumber.equal(this.releaseEnd);
 	});
 
-	it("should handle locked tokens for investor", async function() {
-		await token.mint(tokenHolderAddress, units);
+	it("should release frozen tokens to beneficiary", async function() {
+		await utils.setTime(this.releaseStart);
 
-		expect(await token.balanceOf(tokenHolderAddress)).to.be.bignumber.equal(units);
-		expect(await token.balanceOf(beneficiary)).to.be.bignumber.equal(0);
+		expect(await this.token.balanceOf(this.lockedAccount.address)).to.be.bignumber.equal(units);
+		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(0);
+
+		await this.lockedAccount.release(this.signature, {from: investor});
+
+		expect(await this.token.balanceOf(this.lockedAccount.address)).to.be.bignumber.equal(0);
+		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(units);
 	});
 
-	it("should release tokens to beneficiary", async function() {
-		await token.mint(tokenHolderAddress, units);
-		await utils.setTime(releaseAfter);
-		await tokenHolder.release(signature, {from: beneficiary});
-
-		expect(await token.balanceOf(tokenHolderAddress)).to.be.bignumber.equal(0);
-		expect(await token.balanceOf(beneficiary)).to.be.bignumber.equal(units);
-	});
-
-	it("should fail to release tokens by holder with zero balance", async function() {
-		await token.mint(tokenHolderAddress, units);
-		await utils.setTime(releaseAfter);
-		await tokenHolder.release(signature, {from: beneficiary});
-
-		await expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
-	});
 	it("should fail to release tokens before release time", async function() {
-		await token.mint(tokenHolderAddress, units);
-
-		await expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
+		await expectThrow(this.lockedAccount.release(this.signature, {from: investor}));
 	});
-	it("should fail to release tokens with invalid signature", async function() {
-		await token.mint(tokenHolderAddress, units);
-		await utils.setTime(releaseAfter);
 
-		await expectInvalidOpcode(tokenHolder.release(wrongSignature, {from: beneficiary}));
-	});
-	it("should fail to release tokens with signature from different account", async function() {
-		const anotherTokenHolder = await TokenHolder.new(tokenAddress, signer, beneficiary, releaseAfter, releaseBefore);
-		await utils.setTime(releaseAfter);
-
-		await expectInvalidOpcode(anotherTokenHolder.release(signature, {from: beneficiary}));
-	});
 	it("should fail to release tokens after release time", async function() {
-		await token.mint(tokenHolderAddress, units);
-		await utils.setTime(releaseBefore + 1);
+		await utils.setTime(this.releaseEnd + 1);
 
-		await expectInvalidOpcode(tokenHolder.release(signature, {from: beneficiary}));
+		await expectThrow(this.lockedAccount.release(this.signature, {from: investor}));
+	});
+
+	it("should fail to release tokens with signature from different account", async function() {
+		await utils.setTime(this.releaseStart);
+
+		const anotherLockedAccount = await TokenHolder.new(this.token.address, signer, investor, this.releaseStart, this.releaseEnd);
+
+		await this.token.mint(anotherLockedAccount.address, units);
+
+		await expectThrow(anotherLockedAccount.release(this.signature, {from: investor}));
+	});
+
+	it("should fail to release tokens twice", async function() {
+		await utils.setTime(this.releaseStart);
+
+		await this.lockedAccount.release(this.signature, {from: investor});
+		await expectThrow(this.lockedAccount.release(this.signature, {from: investor}));
 	});
 });

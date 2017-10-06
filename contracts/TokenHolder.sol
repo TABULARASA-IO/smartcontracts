@@ -1,64 +1,65 @@
 pragma solidity ^0.4.11;
 
-import './Token.sol';
 import 'zeppelin-solidity/contracts/ECRecovery.sol';
+import './LEAP.sol';
 
 contract TokenHolder {
-    Token public token;
+    LEAP public token;
 
     address public beneficiary;
     address public signer;
 
-    uint256 public releaseAfter;
-    uint256 public releaseBefore;
+    uint256 public releaseStart;
+    uint256 public releaseEnd;
 
-    modifier checkTime() {
-        require(now >= releaseAfter);
-        require(now <= releaseBefore);
+    function TokenHolder(
+        address _token,
+        address _signer,
+        address _beneficiary,
+        uint256 _releaseStart,
+        uint256 _releaseEnd
+    ) {
+        token = LEAP(_token);
+        beneficiary = _beneficiary;
+        signer = _signer;
+        releaseStart = _releaseStart;
+        releaseEnd = _releaseEnd;
+    }
+
+    modifier readyForRelease() {
+        require(now >= releaseStart);
+        require(now <= releaseEnd);
         _;
     }
 
-    modifier checkSignature(bytes signature) {
+    modifier validSignature(bytes signature) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(prefix, sha3(address(this)));
         require(ECRecovery.recover(hash, signature) == signer);
         _;
     }
 
-    modifier checkSender(address _sender) {
-        require(beneficiary == _sender);
+    modifier onlyFromBeneficiary() {
+        require(msg.sender == beneficiary);
         _;
     }
 
-    modifier checkBalance() {
+    modifier nonZeroBalance() {
         require(token.balanceOf(this) > 0);
         _;
     }
 
-    function TokenHolder(address _token, address _signer, address _beneficiary, uint256 _releaseAfter, uint256 _releaseBefore) {
-        require(_token != 0x0);
-        require(_beneficiary != 0x0);
-        require(_signer != 0x0);
-        require(_releaseAfter > now);
-        require(_releaseBefore > _releaseAfter);
-
-        token = Token(_token);
-        beneficiary = _beneficiary;
-        signer = _signer;
-        releaseAfter = _releaseAfter;
-        releaseBefore = _releaseBefore;
-    }
-
     function release(bytes signature)
-        checkTime
-        checkBalance
-        checkSender(msg.sender)
-        checkSignature(signature)
+        onlyFromBeneficiary
+        readyForRelease
+        nonZeroBalance
+        validSignature(signature)
+        public
     {
         token.transfer(beneficiary, token.balanceOf(this));
     }
 
     function() payable {
-        throw;
+        revert();
     }
 }
