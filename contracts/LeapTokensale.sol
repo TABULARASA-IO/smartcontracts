@@ -46,10 +46,10 @@ contract LeapTokensale is Tokensale {
 
         uint256 totalCoins = token.totalSupply().mul(percent(100)).div(toContributors);
 
-        uint256 toBounty = totalCoins.mul(bountyPercentage).div(percent(100));
-        uint256 toTeam = totalCoins.mul(teamPercentage).div(percent(100));
-        uint256 toEcosystem = totalCoins.mul(ecosystemPercentage).div(percent(100));
-        uint256 toReserve = totalCoins.mul(reservePercentage).div(percent(100));
+        uint256 toBounty = totalCoins.mul(percent(bountyPercentage)).div(percent(100));
+        uint256 toTeam = totalCoins.mul(percent(teamPercentage)).div(percent(100));
+        uint256 toEcosystem = totalCoins.mul(percent(ecosystemPercentage)).div(percent(100));
+        uint256 toReserve = totalCoins.mul(percent(reservePercentage)).div(percent(100));
 
         token.mint(bounty, toBounty);
         token.mint(team, toTeam);
