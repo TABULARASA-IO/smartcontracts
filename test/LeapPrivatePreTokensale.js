@@ -41,7 +41,7 @@ contract("LeapPrivatePreTokensale", function([deployer, token, placeholder, prox
 	it("should process payments only from members", async function() {
 		await this.tokensale.addMember(investor);
 
-		await utils.setTime(await this.tokensale.endTime());
+		await utils.setTime(await this.tokensale.startTime());
 
 		expect(await this.tokensale.validPayment(investor, 1)).to.be.true;
 		expect(await this.tokensale.validPayment(hacker, 1)).to.be.false;
