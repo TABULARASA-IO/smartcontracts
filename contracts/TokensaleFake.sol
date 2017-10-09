@@ -1,8 +1,8 @@
 pragma solidity ^0.4.11;
 
 contract TokensaleFake {
-    address lastBeneficiary;
-    uint256 lastBtcAmount;
+    address public lastBeneficiary;
+    uint256 public lastBtcAmount;
 
     address proxy;
 

@@ -18,8 +18,9 @@ contract BitcoinProxy is Ownable {
 
     mapping(uint256 => bool) public processed;
 
-    function BitcoinProxy(address _btcRelay) {
+    function BitcoinProxy(address _btcRelay, bytes20 _btcWallet) {
         btcRelay = _btcRelay;
+        btcWallet = _btcWallet;
     }
 
     function processTransaction(bytes txBytes, uint256 txHash)
