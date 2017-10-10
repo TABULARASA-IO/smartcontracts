@@ -4,12 +4,13 @@ const BitcoinProxy = artifacts.require('BitcoinProxy');
 const LeapTokensalePlaceholder = artifacts.require('LeapTokensalePlaceholder');
 const Tokensale = artifacts.require('Tokensale');
 const TokenHolder = artifacts.require('TokenHolder');
+const Multisig = artifacts.require('MultiSigWallet');
 
 const utils = require('./utils.js');
 const expect = utils.expect;
 const expectThrow = utils.expectThrow;
 
-contract("Tokensale", function([deployer, wallet, investor, signer, hacker, proxy]) {
+contract("Tokensale", function([deployer, investor, signer, hacker, proxy, wallet1, wallet2, wallet3, wallet4, wallet5]) {
 	const weiInvestment = utils.ether(1);
 	const btcInvestment = new web3.BigNumber(10).pow(17); // 0.1 btc
 
@@ -24,12 +25,14 @@ contract("Tokensale", function([deployer, wallet, investor, signer, hacker, prox
 
 		this.placeholder = await LeapTokensalePlaceholder.new(this.token.address);
 
+		this.wallet = await Multisig.new([wallet1, wallet2, wallet3, wallet4, wallet5], 3);
+
 		this.tokensale = await Tokensale.new(
 			this.startTime,
 			this.token.address,
 			proxy,
 			this.placeholder.address,
-			wallet
+			this.wallet.address
 		);
 
 		this.endTime = await this.tokensale.endTime();
@@ -54,14 +57,14 @@ contract("Tokensale", function([deployer, wallet, investor, signer, hacker, prox
 
 		const expectedCoinsAmount = await this.tokensale.ethCalculateCoinsAmount(weiInvestment);
 
-		const walletBalanceBefore = await utils.getBalance(wallet);
+		const walletBalanceBefore = await utils.getBalance(this.wallet.address);
 		const investorBalanceBefore = await utils.getBalance(investor);
 
 		const {logs} = await this.tokensale.buyCoinsETH({value: weiInvestment, from: investor});
 		const event = logs.find(e => e.event === 'TokenPurchaseETH');
 		const lockedAccount = event.args.account;
 
-		const walletBalanceAfter = await utils.getBalance(wallet);
+		const walletBalanceAfter = await utils.getBalance(this.wallet.address);
 		const investorBalanceAfter = await utils.getBalance(investor);
 
 		// create locked token holder for investor
@@ -181,5 +184,39 @@ contract("Tokensale", function([deployer, wallet, investor, signer, hacker, prox
 
 	it("cannot be finalized before ending", async function() {
 		await expectThrow(this.tokensale.finalize());
+	});
+
+	it("should send funds to multisig wallet", async function() {
+		await utils.setTime(this.startTime);
+
+		const investorBalance1 = await utils.getBalance(investor);
+		const walletBalance1 = await utils.getBalance(this.wallet.address);
+
+		await this.tokensale.buyCoinsETH({value: weiInvestment, from: investor});
+
+		const investorBalance2 = await utils.getBalance(investor);
+		const walletBalance2 = await utils.getBalance(this.wallet.address);
+
+		const transaction = await this.wallet.submitTransaction(investor, weiInvestment, null, { from: wallet1 });
+		const transactionId = transaction.logs.find(e => e.event === 'Submission').args['transactionId'];
+
+		const investorBalance3 = await utils.getBalance(investor);
+		const walletBalance3 = await utils.getBalance(this.wallet.address);
+
+		await this.wallet.confirmTransaction(transactionId, { from: wallet2 });
+		await this.wallet.confirmTransaction(transactionId, { from: wallet3 });
+
+		await expectThrow(this.wallet.confirmTransaction(transactionId, { from: wallet4 }));
+
+		const investorBalance4 = await utils.getBalance(investor);
+		const walletBalance4 = await utils.getBalance(this.wallet.address);
+
+		expect(walletBalance1).to.be.bignumber.equal(0);
+		expect(walletBalance2).to.be.bignumber.equal(utils.inEther(weiInvestment));
+		expect(investorBalance2).to.be.bignumber.below(investorBalance1);
+		expect(investorBalance3).to.be.bignumber.equal(investorBalance2);
+		expect(walletBalance3).to.be.bignumber.equal(walletBalance2);
+		expect(investorBalance4).to.be.bignumber.above(investorBalance3);
+		expect(walletBalance4).to.be.bignumber.below(walletBalance3);
 	});
 });
