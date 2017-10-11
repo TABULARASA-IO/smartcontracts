@@ -35,6 +35,16 @@ contract Tokensale is Ownable {
     event TokenPurchaseBTC(address beneficiary, address account, uint256 weiAmount, uint256 coinsAmount);
     event Finalized();
 
+    modifier notFinalized() {
+        require(!isFinalized);
+        _;
+    }
+
+    modifier onlyFromBitcoinProxy() {
+        require(msg.sender == address(proxy));
+        _;
+    }
+
     function Tokensale(
         uint256 _startTime,
         address _token,
@@ -53,12 +63,12 @@ contract Tokensale is Ownable {
     }
 
     function buyCoinsETH() public payable {
-        require(validPayment(msg.sender, msg.value));
-
         address beneficiary = msg.sender;
         uint256 weiAmount = msg.value;
 
         uint256 coinsAmount = ethCalculateCoinsAmount(weiAmount);
+
+        require(validPayment(msg.sender, coinsAmount));
 
         address account = issueCoins(beneficiary, coinsAmount);
 
@@ -73,9 +83,10 @@ contract Tokensale is Ownable {
 
     function buyCoinsBTC(address beneficiary, uint256 btcAmount)
         onlyFromBitcoinProxy {
-        require(validPayment(beneficiary, btcAmount));
 
         uint256 coinsAmount = btcCalculateCoinsAmount(btcAmount);
+
+        require(validPayment(beneficiary, coinsAmount));
 
         address account = issueCoins(beneficiary, coinsAmount);
 
@@ -104,7 +115,6 @@ contract Tokensale is Ownable {
 
     function issueCoins(address beneficiary, uint256 amount)
         internal
-        checkCap(amount)
         returns(address) {
 
         if(lockedAccounts[beneficiary] == 0x0) {
@@ -126,36 +136,19 @@ contract Tokensale is Ownable {
 
     function validPayment(address beneficiary, uint256 amount) public constant returns(bool) {
         bool withinPeriod = now >= startTime && now <= endTime;
-        bool nonZeroPurchase = amount > 0;
+        bool withinCap = leapRaised.add(amount) <= hardcap;
         bool accountExists = beneficiary != 0x0;
 
-        return withinPeriod && nonZeroPurchase && accountExists;
+        return withinPeriod && withinCap && accountExists;
     }
 
-    modifier checkCap(uint256 amount) {
-        require(leapRaised.add(amount) <= hardcap);
-        _;
+    function hasEnded() public constant returns(bool) {
+        return leapRaised >= hardcap || now >= endTime;
     }
 
-    modifier onlyAfterSale() {
-        require(now >= endTime || leapRaised >= hardcap);
-        _;
-    }
-
-    modifier notFinalized() {
-        require(!isFinalized);
-        _;
-    }
-
-    modifier onlyFromBitcoinProxy() {
-        require(msg.sender == address(proxy));
-        _;
-    }
-
-    function finalize() public
-        notFinalized
-        onlyAfterSale
+    function finalize() public notFinalized
         onlyOwner {
+        require(hasEnded());
 
         finalization();
 

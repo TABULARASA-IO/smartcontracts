@@ -153,6 +153,8 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 
 		const ethCapPayment = utils.ether(10);
 
+		await expectThrow(this.tokensale.buyCoinsETH({value: ethCapPayment.plus(1), from: investor}));
+
 		await this.tokensale.buyCoinsETH({value: ethCapPayment, from: investor});
 
 		await expectThrow(this.tokensale.buyCoinsETH({value: 1, from: investor}));
