@@ -1,30 +1,22 @@
-# smartcontracts
-Token.sol - Умный контракт токена ERC20.
-По запросу владельца чеканит новые монеты для адреса.
+# LEAP Token
 
-ICO.sol - Умный контракт продажи монет.
-Получает деньги от инвестора. Создает новый аккаунт для него.
+- [Whitepaper](https://docs.google.com/document/d/1ugmy5CxX4ek-QRGdh8aeiQWD5LNFrbOXaBGXeg9Sn98/edit?usp=sharing)
 
-Позволяет чеканить новые монеты для инвестора по запросу владельца контракта.
-Активирует баланс инвестора по запросу инвестора с сигнатурой в качестве доказательства нашей подписи.
+## Contracts
 
-Crowdsale.sol - Реализует базовый функционал краудсейла.
+- [LEAP.sol](/contracts/LEAP.sol): Main contract for the token.
+- [LeapTokensalePlaceholder.sol](/contracts/LeapTokensalePlaceholder.sol): Placeholder for token owner between ICO stages.
+- [TokenHolder.sol](/contracts/TokenHolder.sol): Contract where tokens belonging to specific investor will be held before KYC/AML verification. This contract will release this tokens for specific beneficiary after KYC/AML verification.
+- [Tokensale.sol](/contracts/Tokensale.sol): Basic tokensale implementation.
+- [LeapTokensale.sol](/contracts/LeapTokensale.sol): Contract for the main tokensale.
+- [LeapPreTokensale.sol](/contracts/LeapPreTokensale.sol): Contract for the Pre-Tokensale.
+- [LeapPrivatePreTokensale.sol](/contracts/SNT.sol): Contract for the Private Pre-Tokensale.
+- [BitcoinProxy.sol](/contracts/BitcoinProxy.sol): Proxy transferring bitcoin transactions from relay to tokensale.
+- [BTC.sol](/contracts/BTC.sol): Library for bitcoin transactions verification.
+- [MultiSigWallet.sol](/contracts/MultiSigWallet.sol): Multisig contract for funding wallet.
+- [BitcoinRelayFake.sol](/contracts/BitcoinRelayFake.sol): Contract for testing bitcoin relay. BTCRelay network should be used in production instead.
+- [TokensaleFake.sol](/contracts/TokensaleFake.sol): Contract for testing basic tokensale implementation. Should not be used in production.
 
-ICO.sol - Основной этап продажи монет. 
-Получает деньги от инвестора, создает заблокированный аккаунт и переводит монеты на этот аккаунт. 
-Рассчитывает колчество монет в зависимости от установленной цены, а также бонусов.
+## Reviewers and audits.
 
-PreICO.sol - Предварительный этап продажи монет. Работает как основной, но использует постоянную цену.
-
-PrivatePreICO.sol - Приватный этап. Позволяет покупать монеты только инвесторам, занесенным владельцем в список.
-
-CrowdsaleMock.sol - Пример для тестирования базового функционала.
-
-TokenHolder.sol - Заблокированный аккаунт, монеты с которого может забрать только инвестор, для которого этот аккаунт и
-только после окончания текущего этапа краудсейла и только в случае, если у него есть подписанный ключ.
-
-TokenHolderFactory.sol - Вспомогательный аккаунт для создания заблокированных аккаунтов, привязанных к инвестору.
-В случае, если для инвестора уже создан аккаунт на данном этапе краудсейла, возвращается существующий аккаунт.
-
-Ключ для заблокированного аккаунта выдается инвестору после окончания этапа краудсейла и позволяет перевести монеты
-на свой аккаунт, с которого он может использовать эти монеты.
+Code for the LEAP Token and the offering is being reviewed by:
