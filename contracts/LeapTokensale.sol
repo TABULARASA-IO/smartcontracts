@@ -28,28 +28,26 @@ contract LeapTokensale is Tokensale {
     }
 
     uint256 public constant duration = 14 days;
-    uint256 public constant hardcap = 400000000e18;
+    uint256 public constant hardcap = 861500000e18;
 
     address public bounty;
     address public team;
     address public ecosystem;
     address public reserve;
 
-    uint256 public contributorsPercentage = 40;
-    uint256 public bountyPercentage = 10;
-    uint256 public teamPercentage = 15;
-    uint256 public ecosystemPercentage = 15;
-    uint256 public reservePercentage = 20;
+    uint256 public contributorsBasePoints = 4000;
+    uint256 public bountyBasePoints = 1000;
+    uint256 public teamBasePoints = 1500;
+    uint256 public ecosystemBasePoints = 1500;
+    uint256 public reserveBasePoints = 2000;
 
     function finalization() internal {
-        uint256 toContributors = percent(contributorsPercentage);
+        uint256 totalCoins = token.totalSupply().mul(10000).div(contributorsBasePoints);
 
-        uint256 totalCoins = token.totalSupply().mul(percent(100)).div(toContributors);
-
-        uint256 toBounty = totalCoins.mul(percent(bountyPercentage)).div(percent(100));
-        uint256 toTeam = totalCoins.mul(percent(teamPercentage)).div(percent(100));
-        uint256 toEcosystem = totalCoins.mul(percent(ecosystemPercentage)).div(percent(100));
-        uint256 toReserve = totalCoins.mul(percent(reservePercentage)).div(percent(100));
+        uint256 toBounty = calculatePortion(totalCoins, bountyBasePoints);
+        uint256 toTeam = calculatePortion(totalCoins, teamBasePoints);
+        uint256 toEcosystem = calculatePortion(totalCoins, ecosystemBasePoints);
+        uint256 toReserve = calculatePortion(totalCoins, reserveBasePoints);
 
         token.mint(bounty, toBounty);
         token.mint(team, toTeam);
@@ -57,7 +55,7 @@ contract LeapTokensale is Tokensale {
         token.mint(reserve, toReserve);
     }
 
-    function percent(uint256 p) internal returns (uint256) {
-        return p.mul(10**16);
+    function calculatePortion(uint256 coins, uint256 basePoints) internal returns (uint256) {
+        return coins.mul(basePoints).div(10000);
     }
 }

@@ -5,17 +5,17 @@ const utils = require('./utils');
 const expect = utils.expect;
 
 contract("LeapTokensale", function([_, investor, proxy, wallet, placeholder, bounty, team, ecosystem, reserve]) {
-	const contributorsPercentage = 40;
-	const bountyPercentage = 10;
-	const teamPercentage = 15;
-	const ecosystemPercentage = 15;
-	const reservePercentage = 20;
+	const contributorsBasePoints = 4000;
+	const bountyBasePoints = 1000;
+	const teamBasePoints = 1500;
+	const ecosystemBasePoints = 1500;
+	const reserveBasePoints = 2000;
 
 	const contributorsCoins = percentFromOneBillionCoins(40); // 400m^18
 	const bountyCoins = percentFromOneBillionCoins(10); // 100m^18
 	const teamCoins = percentFromOneBillionCoins(15); // 150m^18
 	const ecosystemCoins = percentFromOneBillionCoins(15); // 150m^18
-	const reserveCoins = percentFromOneBillionCoins(20); // 20m^18
+	const reserveCoins = percentFromOneBillionCoins(20); // 200m^18
 
 	function percentFromOneBillionCoins(n) {
 		return new web3.BigNumber(10).pow(7).mul(n) * new web3.BigNumber(10).pow(18);
@@ -56,10 +56,10 @@ contract("LeapTokensale", function([_, investor, proxy, wallet, placeholder, bou
 		expect(await this.tokensale.ecosystem()).to.be.equal(ecosystem);
 		expect(await this.tokensale.reserve()).to.be.equal(reserve);
 
-		expect(await this.tokensale.contributorsPercentage()).to.be.bignumber.equal(contributorsPercentage);
-		expect(await this.tokensale.bountyPercentage()).to.be.bignumber.equal(bountyPercentage);
-		expect(await this.tokensale.teamPercentage()).to.be.bignumber.equal(teamPercentage);
-		expect(await this.tokensale.reservePercentage()).to.be.bignumber.equal(reservePercentage);
+		expect(await this.tokensale.contributorsBasePoints()).to.be.bignumber.equal(contributorsBasePoints);
+		expect(await this.tokensale.bountyBasePoints()).to.be.bignumber.equal(bountyBasePoints);
+		expect(await this.tokensale.teamBasePoints()).to.be.bignumber.equal(teamBasePoints);
+		expect(await this.tokensale.reserveBasePoints()).to.be.bignumber.equal(reserveBasePoints);
 	});
 
 	it("should issue bonuses after the end", async function() {
