@@ -35,8 +35,8 @@ contract LeapTokensale is Tokensale {
     address public ecosystem;
     address public reserve;
 
-    uint256 public contributorsBasePoints = 4000;
-    uint256 public bountyBasePoints = 1000;
+    uint256 public contributorsBasePoints = 4635;
+    uint256 public bountyBasePoints = 365;
     uint256 public teamBasePoints = 1500;
     uint256 public ecosystemBasePoints = 1500;
     uint256 public reserveBasePoints = 2000;

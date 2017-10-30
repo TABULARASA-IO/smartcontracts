@@ -5,17 +5,17 @@ const utils = require('./utils');
 const expect = utils.expect;
 
 contract("LeapTokensale", function([_, investor, proxy, wallet, placeholder, bounty, team, ecosystem, reserve]) {
-	const contributorsBasePoints = 4000;
-	const bountyBasePoints = 1000;
+	const contributorsBasePoints = 4635;
+	const bountyBasePoints = 365;
 	const teamBasePoints = 1500;
 	const ecosystemBasePoints = 1500;
 	const reserveBasePoints = 2000;
 
-	const contributorsCoins = percentFromOneBillionCoins(40); // 400m^18
-	const bountyCoins = percentFromOneBillionCoins(10); // 100m^18
-	const teamCoins = percentFromOneBillionCoins(15); // 150m^18
-	const ecosystemCoins = percentFromOneBillionCoins(15); // 150m^18
-	const reserveCoins = percentFromOneBillionCoins(20); // 200m^18
+	const contributorsCoins = new web3.BigNumber(399305250) * new web3.BigNumber(10).pow(18);
+	const bountyCoins = new web3.BigNumber(31444750) * new web3.BigNumber(10).pow(18);
+	const teamCoins = new web3.BigNumber(129225000) * new web3.BigNumber(10).pow(18);
+	const ecosystemCoins = new web3.BigNumber(129225000) * new web3.BigNumber(10).pow(18);
+	const reserveCoins = new web3.BigNumber(172300000) * new web3.BigNumber(10).pow(18);
 
 	function percentFromOneBillionCoins(n) {
 		return new web3.BigNumber(10).pow(7).mul(n) * new web3.BigNumber(10).pow(18);

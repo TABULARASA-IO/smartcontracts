@@ -16,8 +16,8 @@ contract LeapPrivatePreTokensale is Tokensale {
         _placeholder,
         _wallet) {}
 
-    uint256 public constant duration = 14 days;
-    uint256 public constant hardcap = 1000000e18;
+    uint256 public constant duration = 7 days;
+    uint256 public constant hardcap = 52500000e18;
 
     mapping (address => bool) members;
 

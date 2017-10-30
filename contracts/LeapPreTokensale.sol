@@ -17,4 +17,7 @@ contract LeapPreTokensale is Tokensale {
         _wallet
     ) {}
 
+    uint256 public constant duration = 14 days;
+    uint256 public constant hardcap = 86000000e18;
+
 }
