@@ -68,11 +68,11 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		const investorBalanceAfter = await utils.getBalance(investor);
 
 		// create locked token holder for investor
-		expect(lockedAccount).to.be.not.equal(investor);
-		expect(await TokenHolder.at(lockedAccount).beneficiary()).to.be.equal(investor);
+		// expect(lockedAccount).to.be.not.equal(investor);
+		// expect(await TokenHolder.at(lockedAccount).beneficiary()).to.be.equal(investor);
 
 		// increase balance of locked account
-		expect(await this.token.balanceOf(lockedAccount)).to.be.bignumber.equal(expectedCoinsAmount);
+		expect(await this.tokensale.balanceOf(lockedAccount)).to.be.bignumber.equal(expectedCoinsAmount);
 
 		// increase leap payments counter
 		expect(await this.tokensale.leapRaised()).to.be.bignumber.equal(expectedCoinsAmount);
@@ -81,7 +81,7 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		expect(await this.tokensale.weiRaisedBy(investor)).to.be.bignumber.equal(weiInvestment);
 
 		// increase token total supply
-		expect(await this.token.totalSupply()).to.be.bignumber.equal(expectedCoinsAmount);
+		// expect(await this.token.totalSupply()).to.be.bignumber.equal(expectedCoinsAmount);
 
 		// forward funds to wallet
 		expect(walletBalanceAfter).to.be.bignumber.above(walletBalanceBefore);
@@ -109,8 +109,8 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		const account = logs.find(e => e.event === 'TokenPurchaseBTC').args.account;
 
 		// create locked token holder for investor
-		expect(account).to.be.not.equal(investor);
-		expect(await TokenHolder.at(account).beneficiary()).to.be.bignumber.equal(investor);
+		// expect(account).to.be.not.equal(investor);
+		// expect(await TokenHolder.at(account).beneficiary()).to.be.bignumber.equal(investor);
 
 		// increase btc by investor payments counter
 		expect(await this.tokensale.satoshiRaisedBy(investor)).to.be.bignumber.equal(btcInvestment);
@@ -119,29 +119,10 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		expect(await this.tokensale.leapRaised()).to.be.bignumber.equal(expectedCoinsAmount);
 
 		// increase token total supply
-		expect(await this.token.totalSupply()).to.be.bignumber.equal(expectedCoinsAmount);
+		// expect(await this.token.totalSupply()).to.be.bignumber.equal(expectedCoinsAmount);
 
 		// increase balance of locked account
-		expect(await this.token.balanceOf(account)).to.be.bignumber.equal(expectedCoinsAmount);
-	});
-
-	it("should lock coins on holder associated to investor", async function() {
-		await utils.setTime(this.startTime);
-
-		const expectedCoinsAmountForETH = (await this.tokensale.rate()).mul(weiInvestment);
-		const expectedCoinsAmountForBTC = (await this.tokensale.btcRate()).mul(btcInvestment);
-		const expectedCoinsAmountTotal = expectedCoinsAmountForBTC.plus(expectedCoinsAmountForETH);
-
-		const tx = await this.tokensale.buyCoinsETH({value: weiInvestment, from: investor});
-		const account = tx.logs[0].args.account;
-
-		const tx2 = await this.tokensale.buyCoinsBTC(investor, btcInvestment, {from: proxy});
-		const account2 = tx2.logs[0].args.account;
-
-		expect(account).to.be.equal(account2);
-
-		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(0);
-		expect(await this.token.balanceOf(account)).to.be.bignumber.equal(expectedCoinsAmountTotal);
+		expect(await this.tokensale.balanceOf(account)).to.be.bignumber.equal(expectedCoinsAmount);
 	});
 
 	it("should reject direct payments", async function() {
@@ -259,5 +240,41 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		const rateAfter = await this.tokensale.btcRate();
 
 		expect(rateBefore).to.be.bignumber.equal(rateAfter);
+	});
+
+	it("should allow owner to release/mint tokens", async function() {
+		await utils.setTime(this.startTime);
+
+		const amount = (await this.tokensale.rate()).mul(weiInvestment);
+
+		await this.tokensale.buyCoinsETH({from: investor, value: weiInvestment});
+
+		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(amount);
+		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(0);
+
+		await this.tokensale.releaseCoins({from: deployer});
+
+		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(0);
+		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(amount);
+	});
+
+	it("should allow owner to refund payment when KYC was failed", async function() {
+		await utils.setTime(this.startTime);
+
+		const amount = (await this.tokensale.rate()).mul(weiInvestment);
+
+		await this.tokensale.buyCoinsETH({from: investor, value: weiInvestment});
+
+		const investorBalancePayout = await utils.getBalance(investor);
+
+		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(amount);
+
+		await this.tokensale.refund(investor, { from: deployer, value: weiInvestment });
+
+		const investorBalanceRefunded = await utils.getBalance(investor)
+
+		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(0);
+
+		expect(investorBalanceRefunded).to.be.bignumber.above(investorBalancePayout);
 	});
 });

@@ -26,7 +26,8 @@ contract Tokensale is Ownable {
 
     bool public isFinalized = false;
 
-    mapping(address => address) public lockedAccounts;
+    mapping(address => uint256) public lockedAccounts;
+    address[] public accountsIndex;
 
     event TokenPurchaseETH(address beneficiary, address account, uint256 weiAmount, uint256 coinsAmount);
     event TokenPurchaseBTC(address beneficiary, address account, uint256 weiAmount, uint256 coinsAmount);
@@ -163,18 +164,35 @@ contract Tokensale is Ownable {
         }
     }
 
-    function issueCoins(address beneficiary, uint256 amount) internal returns(address ) {
-        if(lockedAccounts[beneficiary] == 0x0) {
-            lockedAccounts[beneficiary] = address(
-            new TokenHolder(
-            token, owner, beneficiary, startTime, endTime + releaseDuration()
-            )
-            );
-        }
+    function issueCoins(address beneficiary, uint256 amount) internal returns(address) {
+        accountsIndex.push(beneficiary);
 
-        address lockedAccount = lockedAccounts[beneficiary];
-        token.mint(lockedAccount, amount);
-        return lockedAccount;
+        lockedAccounts[beneficiary] = lockedAccounts[beneficiary].add(amount);
+
+        return beneficiary;
+    }
+
+    function balanceOf(address beneficiary) public constant returns (uint256) {
+        return lockedAccounts[beneficiary];
+    }
+
+    function releaseCoins() public onlyOwner {
+        for(uint256 i = 0; i < accountsIndex.length; i++) {
+            address beneficiary = accountsIndex[i];
+            uint256 balance = lockedAccounts[beneficiary];
+
+            lockedAccounts[beneficiary] = 0;
+
+            token.mint(beneficiary, balance);
+        }
+    }
+
+    function refund(address beneficiary) public payable onlyOwner {
+        require(msg.value >= weiRaisedBy[beneficiary]);
+
+        lockedAccounts[beneficiary] = 0;
+
+        beneficiary.transfer(msg.value);
     }
 
     function finalize() public notFinalized onlyOwner {
