@@ -2,7 +2,7 @@ const Token = artifacts.require('LEAP');
 const BitcoinRelayFake = artifacts.require('BitcoinRelayFake');
 const BitcoinProxy = artifacts.require('BitcoinProxy');
 const LeapTokensalePlaceholder = artifacts.require('LeapTokensalePlaceholder');
-const Tokensale = artifacts.require('Tokensale');
+const Tokensale = artifacts.require('TokensaleFake');
 const TokenHolder = artifacts.require('TokenHolder');
 const Multisig = artifacts.require('MultiSigWallet');
 
@@ -55,7 +55,7 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 	it("should accept ETH payments", async function() {
 		await utils.setTime(this.startTime);
 
-		const expectedCoinsAmount = await this.tokensale.ethCalculateCoinsAmount(weiInvestment);
+		const expectedCoinsAmount = (await this.tokensale.rate()).mul(weiInvestment);
 
 		const walletBalanceBefore = await utils.getBalance(this.wallet.address);
 		const investorBalanceBefore = await utils.getBalance(investor);
@@ -88,10 +88,22 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		expect(investorBalanceAfter).to.be.bignumber.below(investorBalanceBefore);
 	});
 
+	it("should give ETH charge for last payment", async function() {
+		await utils.setTime(this.startTime);
+
+		const weiInvestmentOvercap = utils.ether(3);
+
+		const {logs} = await this.tokensale.buyCoinsETH({value: weiInvestmentOvercap, from: investor});
+		const event = logs.find(e => e.event === 'ETHCharge');
+		const charge = event.args['amount'];
+
+		expect(charge).to.be.bignumber.equal(utils.ether(1));
+	});
+
 	it("should accept BTC payments", async function() {
 		await utils.setTime(this.startTime);
 
-		const expectedCoinsAmount = await this.tokensale.btcCalculateCoinsAmount(btcInvestment);
+		const expectedCoinsAmount = (await this.tokensale.btcRate()).mul(btcInvestment);
 
 		const {logs} = await this.tokensale.buyCoinsBTC(investor, btcInvestment, {from: proxy});
 		const account = logs.find(e => e.event === 'TokenPurchaseBTC').args.account;
@@ -116,8 +128,8 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 	it("should lock coins on holder associated to investor", async function() {
 		await utils.setTime(this.startTime);
 
-		const expectedCoinsAmountForETH = await this.tokensale.ethCalculateCoinsAmount(weiInvestment);
-		const expectedCoinsAmountForBTC = await this.tokensale.btcCalculateCoinsAmount(btcInvestment);
+		const expectedCoinsAmountForETH = (await this.tokensale.rate()).mul(weiInvestment);
+		const expectedCoinsAmountForBTC = (await this.tokensale.btcRate()).mul(btcInvestment);
 		const expectedCoinsAmountTotal = expectedCoinsAmountForBTC.plus(expectedCoinsAmountForETH);
 
 		const tx = await this.tokensale.buyCoinsETH({value: weiInvestment, from: investor});
@@ -151,9 +163,10 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 	it("should reject payments outside cap", async function() {
 		await utils.setTime(this.startTime);
 
-		const ethCapPayment = utils.ether(10);
+		const ethCapPayment = new web3.BigNumber((await this.tokensale.hardcap())).div(5000);
 
-		await expectThrow(this.tokensale.buyCoinsETH({value: ethCapPayment.plus(1), from: investor}));
+		// it is okay
+		//await (this.tokensale.buyCoinsETH({value: ethCapPayment.plus(1), from: investor}));
 
 		await this.tokensale.buyCoinsETH({value: ethCapPayment, from: investor});
 
@@ -220,5 +233,31 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		expect(walletBalance3).to.be.bignumber.equal(walletBalance2);
 		expect(investorBalance4).to.be.bignumber.above(investorBalance3);
 		expect(walletBalance4).to.be.bignumber.below(walletBalance3);
+	});
+
+	it("should allow owner to update bitcoin exchange rate", async function() {
+		const rateBefore = await this.tokensale.btcMultiplierBasePoints();
+
+		const oldRate = 10000;
+		const newRate = 20000;
+
+		const tx = await this.tokensale.updateBitcoinMultiplier(newRate, { from: deployer });
+		const rateLogged = tx.logs[0].args['rate'];
+
+		const rateAfter = await this.tokensale.btcMultiplierBasePoints();
+
+		expect(rateBefore).to.be.bignumber.equal(oldRate);
+		expect(rateAfter).to.be.bignumber.equal(newRate);
+		expect(rateLogged).to.be.bignumber.equal(newRate);
+	});
+
+	it("should disallow non-owner to update bitcoin exchange rate", async function() {
+		const rateBefore = await this.tokensale.btcRate();
+
+		await expectThrow(this.tokensale.updateBitcoinMultiplier(20000, { from: hacker }));
+
+		const rateAfter = await this.tokensale.btcRate();
+
+		expect(rateBefore).to.be.bignumber.equal(rateAfter);
 	});
 });

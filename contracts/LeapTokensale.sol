@@ -27,22 +27,36 @@ contract LeapTokensale is Tokensale {
         reserve = _reserve;
     }
 
-    uint256 public constant duration = 14 days;
-    uint256 public constant hardcap = 861500000e18;
+    function hardcap() public constant returns (uint256) {
+        return 261500000e18;
+    }
+    function duration() public constant returns (uint256) {
+        return 14 days;
+    }
+    function releaseDuration() public constant returns (uint256) {
+        return 7 days;
+    }
 
     address public bounty;
     address public team;
     address public ecosystem;
     address public reserve;
 
-    uint256 public contributorsBasePoints = 4635;
-    uint256 public bountyBasePoints = 365;
+    uint256 public contributorsBasePoints = 4000;
+    uint256 public bountyBasePoints = 1000;
     uint256 public teamBasePoints = 1500;
     uint256 public ecosystemBasePoints = 1500;
     uint256 public reserveBasePoints = 2000;
 
     function finalization() internal {
-        uint256 totalCoins = token.totalSupply().mul(10000).div(contributorsBasePoints);
+        uint256 totalCoins = 1000000000e18;
+        uint256 contributorsCoins = token.totalSupply();
+
+        uint256 contributorsBasePointsCalculated = contributorsCoins.mul(10000).div(totalCoins);
+
+        if(contributorsBasePointsCalculated < contributorsBasePoints) {
+            reserveBasePoints = reserveBasePoints.add(contributorsBasePoints).sub(contributorsBasePointsCalculated);
+        }
 
         uint256 toBounty = calculatePortion(totalCoins, bountyBasePoints);
         uint256 toTeam = calculatePortion(totalCoins, teamBasePoints);
@@ -53,9 +67,29 @@ contract LeapTokensale is Tokensale {
         token.mint(team, toTeam);
         token.mint(ecosystem, toEcosystem);
         token.mint(reserve, toReserve);
+
+        super.finalization();
     }
 
     function calculatePortion(uint256 coins, uint256 basePoints) internal returns (uint256) {
         return coins.mul(basePoints).div(10000);
+    }
+
+    function forwardFunds(uint256 amount) internal {
+        wallet.transfer(amount);
+    }
+
+    function rate() public constant returns (uint256) {
+        if(leapRaised < 36000000e18) {
+            return 3600;
+        } else if(leapRaised < 82000000e18) {
+            return 3450;
+        } else if(leapRaised < 137000000e18) {
+            return 3300;
+        } else if(leapRaised < 201500000e18) {
+            return 3225;
+        } else {
+            return 3000;
+        }
     }
 }

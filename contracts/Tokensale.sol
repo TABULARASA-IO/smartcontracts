@@ -6,7 +6,6 @@ import './TokenHolder.sol';
 import './BitcoinProxy.sol';
 import './LeapTokensalePlaceholder.sol';
 
-// owner should finalize tokensale and sign verified transactions
 contract Tokensale is Ownable {
     using SafeMath for uint256;
 
@@ -23,9 +22,7 @@ contract Tokensale is Ownable {
     mapping(address => uint256) public weiRaisedBy;
     mapping(address => uint256) public satoshiRaisedBy;
 
-    uint256 public constant duration = 14 days;
-    uint256 public constant hardcap = 10000000e18; // 10M leap coins with 18 decimals
-    uint256 public constant releaseDuration = 7 days;
+    uint256 public btcMultiplierBasePoints = 10000;
 
     bool public isFinalized = false;
 
@@ -34,6 +31,9 @@ contract Tokensale is Ownable {
     event TokenPurchaseETH(address beneficiary, address account, uint256 weiAmount, uint256 coinsAmount);
     event TokenPurchaseBTC(address beneficiary, address account, uint256 weiAmount, uint256 coinsAmount);
     event Finalized();
+    event BitcoinRateChanged(uint256 rate);
+    event BitcoinCharge(uint256 amount, address beneficiary);
+    event ETHCharge(uint256 amount, address beneficiary);
 
     modifier notFinalized() {
         require(!isFinalized);
@@ -45,87 +45,130 @@ contract Tokensale is Ownable {
         _;
     }
 
+    function hardcap() public constant returns (uint256);
+    function duration() public constant returns (uint256);
+    function releaseDuration() public constant returns (uint256);
+    function rate() public constant returns (uint256);
+    function forwardFunds(uint256 amount) internal;
+
+    function btcRate() public constant returns (uint256) {
+        return rate().mul(btcMultiplierBasePoints).div(1000);
+    }
+
     function Tokensale(
-        uint256 _startTime,
-        address _token,
-        address _proxy,
-        address _placeholder,
-        address _wallet
+    uint256 _startTime,
+    address _token,
+    address _proxy,
+    address _placeholder,
+    address _wallet
     ) {
         require(_startTime >= now);
 
         startTime = _startTime;
-        endTime = startTime + duration;
+        endTime = startTime + duration();
         token = LEAP(_token);
         proxy = BitcoinProxy(_proxy);
         placeholder = LeapTokensalePlaceholder(_placeholder);
         wallet = _wallet;
     }
 
+    function updateBitcoinMultiplier(uint256 _rate) public onlyOwner {
+        btcMultiplierBasePoints = _rate;
+        BitcoinRateChanged(_rate);
+    }
+
     function buyCoinsETH() public payable {
         address beneficiary = msg.sender;
+
+        require(validPayment(beneficiary));
+
+        require(!isContract(msg.sender));
+
         uint256 weiAmount = msg.value;
+        uint256 leftForSale = hardcap().sub(leapRaised);
 
-        uint256 coinsAmount = ethCalculateCoinsAmount(weiAmount);
+        if(weiAmount > 0) {
+            if(leftForSale > 0) {
+                uint256 coinsAmount = weiAmount.mul(rate());
 
-        require(validPayment(msg.sender, coinsAmount));
+                if(coinsAmount > leftForSale) {
+                    coinsAmount = leftForSale;
+                    weiAmount = leftForSale.div(rate());
+                }
 
-        address account = issueCoins(beneficiary, coinsAmount);
+                address account = issueCoins(beneficiary, coinsAmount);
 
-        leapRaised = leapRaised.add(coinsAmount);
+                leapRaised = leapRaised.add(coinsAmount);
 
-        weiRaisedBy[beneficiary] = weiRaisedBy[beneficiary].add(weiAmount);
+                weiRaisedBy[beneficiary] = weiRaisedBy[beneficiary].add(weiAmount);
 
-        TokenPurchaseETH(beneficiary, account, weiAmount, coinsAmount);
+                TokenPurchaseETH(beneficiary, account, weiAmount, coinsAmount);
 
-        forwardFunds();
+                forwardFunds(weiAmount);
+            } else {
+                weiAmount = 0;
+            }
+        }
+
+        uint256 charge = msg.value.sub(weiAmount);
+        if(charge > 0) {
+            msg.sender.transfer(charge);
+
+            ETHCharge(charge, msg.sender);
+        }
+    }
+
+    function isContract(address _addr) constant internal returns (bool) {
+        if (_addr == 0) return false;
+        uint256 size;
+        assembly {
+        size := extcodesize(_addr)
+        }
+        return (size > 0);
     }
 
     function buyCoinsBTC(address beneficiary, uint256 btcAmount)
-        onlyFromBitcoinProxy {
+    onlyFromBitcoinProxy {
 
-        uint256 coinsAmount = btcCalculateCoinsAmount(btcAmount);
+        require(validPayment(beneficiary));
 
-        require(validPayment(beneficiary, coinsAmount));
+        uint256 leftForSale = hardcap().sub(leapRaised);
 
-        address account = issueCoins(beneficiary, coinsAmount);
+        uint256 btcAmountPaid = btcAmount;
 
-        leapRaised = leapRaised.add(coinsAmount);
+        if(btcAmountPaid > 0) {
+            if(leftForSale > 0) {
+                uint256 coinsAmount = btcAmount.mul(btcRate());
 
-        satoshiRaisedBy[beneficiary] = satoshiRaisedBy[beneficiary].add(btcAmount);
+                if(coinsAmount > leftForSale) {
+                    coinsAmount = leftForSale;
+                    btcAmountPaid = leftForSale.div(btcRate());
+                }
 
-        TokenPurchaseBTC(beneficiary, account, btcAmount, coinsAmount);
+                address account = issueCoins(beneficiary, coinsAmount);
+
+                leapRaised = leapRaised.add(coinsAmount);
+
+                satoshiRaisedBy[beneficiary] = satoshiRaisedBy[beneficiary].add(btcAmount);
+
+                TokenPurchaseBTC(beneficiary, account, btcAmount, coinsAmount);
+            } else {
+                btcAmountPaid = 0;
+            }
+        }
+
+        uint256 charge = btcAmount.sub(btcAmountPaid);
+        if(charge > 0) {
+            BitcoinCharge(charge, beneficiary);
+        }
     }
 
-    function forwardFunds() internal {
-        wallet.transfer(msg.value);
-    }
-
-    function btcCalculateCoinsAmount(uint256 paymentAmount) public constant returns (uint256) {
-        uint256 currentRate = 10000000;
-        uint256 amount = paymentAmount * currentRate;
-        return amount;
-    }
-
-    function ethCalculateCoinsAmount(uint256 paymentAmount) public constant returns (uint256) {
-        uint256 currentRate = 1000000;
-        uint256 amount = paymentAmount * currentRate;
-        return amount;
-    }
-
-    function issueCoins(address beneficiary, uint256 amount)
-        internal
-        returns(address) {
-
+    function issueCoins(address beneficiary, uint256 amount) internal returns(address ) {
         if(lockedAccounts[beneficiary] == 0x0) {
             lockedAccounts[beneficiary] = address(
-                new TokenHolder(
-                    token,
-                    owner,
-                    beneficiary,
-                    startTime,
-                    endTime + releaseDuration
-                )
+            new TokenHolder(
+            token, owner, beneficiary, startTime, endTime + releaseDuration()
+            )
             );
         }
 
@@ -134,20 +177,7 @@ contract Tokensale is Ownable {
         return lockedAccount;
     }
 
-    function validPayment(address beneficiary, uint256 amount) public constant returns(bool) {
-        bool withinPeriod = now >= startTime && now <= endTime;
-        bool withinCap = leapRaised.add(amount) <= hardcap;
-        bool accountExists = beneficiary != 0x0;
-
-        return withinPeriod && withinCap && accountExists;
-    }
-
-    function hasEnded() public constant returns(bool) {
-        return leapRaised >= hardcap || now >= endTime;
-    }
-
-    function finalize() public notFinalized
-        onlyOwner {
+    function finalize() public notFinalized onlyOwner {
         require(hasEnded());
 
         finalization();
@@ -159,5 +189,17 @@ contract Tokensale is Ownable {
 
     function finalization() internal {
         token.transferOwnership(placeholder);
+    }
+
+    function hasEnded() public constant returns (bool) {
+        return (leapRaised >= hardcap()) || (now >= endTime);
+    }
+
+    function validPayment(address beneficiary) public constant returns (bool) {
+        bool withinPeriod = now >= startTime && now <= endTime;
+        bool withinCap = leapRaised <= hardcap() - rate();
+        bool accountExists = beneficiary != 0x0;
+
+        return withinPeriod && withinCap && accountExists;
     }
 }

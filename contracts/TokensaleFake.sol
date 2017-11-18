@@ -1,19 +1,37 @@
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.0;
 
-contract TokensaleFake {
-    address public lastBeneficiary;
-    uint256 public lastBtcAmount;
+import './Tokensale.sol';
 
-    address proxy;
-
-    function TokensaleFake(address _proxy) {
-        proxy = _proxy;
+contract TokensaleFake is Tokensale {
+    function TokensaleFake(
+        uint _startTime,
+        address _token,
+        address _proxy,
+        address _placeholder,
+        address _wallet) Tokensale(
+        _startTime,
+        _token,
+        _proxy,
+        _placeholder,
+        _wallet
+    ) {
     }
 
-    function buyCoinsBTC(address beneficiary, uint256 btcAmount) public {
-        require(proxy == msg.sender);
+    function hardcap() public constant returns (uint256) {
+        return 10000e18;
+    }
+    function duration() public constant returns (uint256) {
+        return 14 days;
+    }
+    function releaseDuration() public constant returns (uint256) {
+        return 7 days;
+    }
 
-        lastBeneficiary = beneficiary;
-        lastBtcAmount = btcAmount;
+    function rate() public constant returns (uint256) {
+        return 5000;
+    }
+
+    function forwardFunds(uint256 amount) internal {
+        wallet.transfer(amount);
     }
 }

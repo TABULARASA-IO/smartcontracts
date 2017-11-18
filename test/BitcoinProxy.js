@@ -1,5 +1,5 @@
 const BitcoinProxy = artifacts.require('BitcoinProxy');
-const TokensaleFake = artifacts.require('TokensaleFake');
+const Tokensale = artifacts.require('TokensaleFake');
 
 const utils = require('./utils');
 const expect = utils.expect;
@@ -7,7 +7,7 @@ const expectThrow = utils.expectThrow;
 
 const bs58 = require('bs58');
 
-contract("BitcoinProxy", function([deployer, investor, hacker]) {
+contract("BitcoinProxy", function([deployer, investor, hacker, token, placeholder, wallet]) {
 	const satoshiAmount = 12345678;
 	const rawBtcWallet = "1MaTeTiCCGFvgmZxK2R1pmD9LDWvkmU9BS";
 	const hash = 0x123;
@@ -25,7 +25,13 @@ contract("BitcoinProxy", function([deployer, investor, hacker]) {
 	beforeEach(async function() {
 		this.proxy = await BitcoinProxy.new(deployer, btcWallet);
 
-		this.tokensale = await TokensaleFake.new(this.proxy.address);
+		this.tokensale = await Tokensale.new(
+			utils.latestTime() + 3600,
+			token,
+			this.proxy.address,
+			placeholder,
+			wallet
+		);
 
 		await this.proxy.setTokensale(this.tokensale.address);
 	});
@@ -51,10 +57,10 @@ contract("BitcoinProxy", function([deployer, investor, hacker]) {
 		await expectThrow(this.proxy.claim(hash, {from: investor}));
 	});
 
-	it("user should not be able to promise multiple payments at once", async function() {
-		await this.proxy.promise(satoshiAmount, {from: investor});
-		await expectThrow(this.proxy.promise(satoshiAmount * 2, {from: investor}));
-	});
+		it("user should not be able to promise multiple payments at once", async function() {
+			await this.proxy.promise(satoshiAmount, {from: investor});
+			await expectThrow(this.proxy.promise(satoshiAmount * 2, {from: investor}));
+		});
 
 	it("user should not be able to reclaim transaction", async function() {
 		await this.proxy.promise(satoshiAmount, {from: investor});
@@ -70,7 +76,7 @@ contract("BitcoinProxy", function([deployer, investor, hacker]) {
 
 		const tx = await this.proxy.processTransaction(transaction, hash);
 
-		expect(await this.tokensale.lastBeneficiary()).to.be.equal(investor);
-		expect(await this.tokensale.lastBtcAmount()).to.be.bignumber.equal(satoshiAmount);
+		expect(tx.logs[0].args['beneficiary']).to.be.equal(investor);
+		expect(tx.logs[1].args['btcAmount']).to.be.bignumber.equal(satoshiAmount);
 	});
 });

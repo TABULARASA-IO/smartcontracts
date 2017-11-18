@@ -1,21 +1,37 @@
-const Tokensale = artifacts.require('LeapTokensale.sol');
+const Tokensale = artifacts.require('LeapTokensaleFake.sol');
 const Token = artifacts.require('LEAP.sol');
 
 const utils = require('./utils');
 const expect = utils.expect;
+const ether = utils.ether;
+const inBaseUnits = utils.inBaseUnits(18);
 
 contract("LeapTokensale", function([_, investor, proxy, wallet, placeholder, bounty, team, ecosystem, reserve]) {
-	const contributorsBasePoints = 4635;
-	const bountyBasePoints = 365;
+	const contributorsBasePoints = 4000;
+	const bountyBasePoints = 1000;
 	const teamBasePoints = 1500;
 	const ecosystemBasePoints = 1500;
 	const reserveBasePoints = 2000;
 
-	const contributorsCoins = new web3.BigNumber(399305250) * new web3.BigNumber(10).pow(18);
-	const bountyCoins = new web3.BigNumber(31444750) * new web3.BigNumber(10).pow(18);
-	const teamCoins = new web3.BigNumber(129225000) * new web3.BigNumber(10).pow(18);
-	const ecosystemCoins = new web3.BigNumber(129225000) * new web3.BigNumber(10).pow(18);
-	const reserveCoins = new web3.BigNumber(172300000) * new web3.BigNumber(10).pow(18);
+	const contributorsCoins = new web3.BigNumber(400000000) * new web3.BigNumber(10).pow(18);
+	const bountyCoins = new web3.BigNumber(100000000) * new web3.BigNumber(10).pow(18);
+	const teamCoins = new web3.BigNumber(150000000) * new web3.BigNumber(10).pow(18);
+	const ecosystemCoins = new web3.BigNumber(150000000) * new web3.BigNumber(10).pow(18);
+	const reserveCoins = new web3.BigNumber(200000000) * new web3.BigNumber(10).pow(18);
+
+	const firstStageRaised = new web3.BigNumber(inBaseUnits(36000000));
+	const secondStageRaised = new web3.BigNumber(inBaseUnits(46002300));
+	const thirdStageRaised = new web3.BigNumber(inBaseUnits(55001100));
+	const fourthStageRaised = new web3.BigNumber(inBaseUnits(64500000));
+	const fifthStageRaised = new web3.BigNumber(inBaseUnits(59996600));
+
+	const priceForFirstStage = 3600;
+	const priceForSecondStage = 3450;
+	const priceForThirdStage = 3300;
+	const priceForFourthStage = 3225;
+	const priceForFifthStage = 3000;
+
+	const divider = 10000;
 
 	function percentFromOneBillionCoins(n) {
 		return new web3.BigNumber(10).pow(7).mul(n) * new web3.BigNumber(10).pow(18);
@@ -72,5 +88,38 @@ contract("LeapTokensale", function([_, investor, proxy, wallet, placeholder, bou
 		expect(await this.token.balanceOf(team)).to.be.bignumber.equal(teamCoins);
 		expect(await this.token.balanceOf(ecosystem)).to.be.bignumber.equal(ecosystemCoins);
 		expect(await this.token.balanceOf(reserve)).to.be.bignumber.equal(reserveCoins);
+	});
+
+	it("should process ETH payments correctly", async function() {
+		await utils.setTime(await this.tokensale.startTime());
+
+		const firstStageInvestmentAmount = ether(10000).div(divider);
+		const secondStageInvestmentAmount = ether(13334).div(divider);
+		const thirdStageInvestmentAmount = ether(16667).div(divider);
+		const fourthStageInvestmentAmount = ether(20000).div(divider);
+
+		// the charge should be transfered back to investor
+		const fifthStageInvestmentAmount = ether(19999).div(divider);
+
+		await this.tokensale.buyCoinsETH({from: investor, value: firstStageInvestmentAmount});
+		const supplyFirstStage = await this.tokensale.leapRaised();
+
+		await this.tokensale.buyCoinsETH({from: investor, value: secondStageInvestmentAmount});
+		const supplySecondStage = await this.tokensale.leapRaised();
+
+		await this.tokensale.buyCoinsETH({from: investor, value: thirdStageInvestmentAmount});
+		const supplyThirdStage = await this.tokensale.leapRaised();
+
+		await this.tokensale.buyCoinsETH({from: investor, value: fourthStageInvestmentAmount});
+		const supplyFourthStage = await this.tokensale.leapRaised();
+
+		await this.tokensale.buyCoinsETH({from: investor, value: fifthStageInvestmentAmount});
+		const supplyFifthStage = await this.tokensale.leapRaised();
+
+		expect(supplyFirstStage).to.be.bignumber.equal(firstStageRaised.div(divider));
+		expect(supplySecondStage).to.be.bignumber.equal(firstStageRaised.plus(secondStageRaised).div(divider));
+		expect(supplyThirdStage).to.be.bignumber.equal(firstStageRaised.plus(secondStageRaised).plus(thirdStageRaised).div(divider));
+		expect(supplyFourthStage).to.be.bignumber.equal(firstStageRaised.plus(secondStageRaised).plus(thirdStageRaised).plus(fourthStageRaised).div(divider));
+		expect(supplyFifthStage).to.be.bignumber.equal(firstStageRaised.plus(secondStageRaised).plus(thirdStageRaised).plus(fourthStageRaised).plus(fifthStageRaised).div(divider));
 	});
 });

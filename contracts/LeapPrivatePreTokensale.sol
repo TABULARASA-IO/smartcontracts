@@ -14,10 +14,18 @@ contract LeapPrivatePreTokensale is Tokensale {
         _token,
         _proxy,
         _placeholder,
-        _wallet) {}
+        _wallet) {
+    }
 
-    uint256 public constant duration = 7 days;
-    uint256 public constant hardcap = 52500000e18;
+    function hardcap() public constant returns (uint256) {
+        return 52500000e18;
+    }
+    function duration() public constant returns (uint256) {
+        return 7 days;
+    }
+    function releaseDuration() public constant returns (uint256) {
+        return 7 days;
+    }
 
     mapping (address => bool) members;
 
@@ -34,7 +42,16 @@ contract LeapPrivatePreTokensale is Tokensale {
         return members[_investor];
     }
 
-    function validPayment(address beneficiary, uint256 amount) public constant returns (bool) {
-        return super.validPayment(beneficiary, amount) && isMember(beneficiary);
+    function validPayment(address beneficiary) public constant returns (bool) {
+        return super.validPayment(beneficiary) && isMember(beneficiary);
     }
+
+    function rate() public constant returns (uint256) {
+        return 5250;
+    }
+
+    function forwardFunds(uint256 amount) internal {
+        wallet.transfer(amount);
+    }
+
 }
