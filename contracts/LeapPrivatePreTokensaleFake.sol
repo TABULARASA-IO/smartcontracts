@@ -13,13 +13,13 @@ contract LeapPrivatePreTokensaleFake is LeapPrivatePreTokensale {
         address _token,
         address _proxy,
         address _placeholder,
-        address _wallet
+        address _wallet, address _secondWallet
     ) LeapPrivatePreTokensale (
         _startTime,
         _token,
         _proxy,
         _placeholder,
-        _wallet) {
+        _wallet, _secondWallet) {
     }
 
     function hardcap() public constant returns (uint256) {
