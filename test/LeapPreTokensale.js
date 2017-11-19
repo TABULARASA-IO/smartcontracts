@@ -6,8 +6,9 @@ const expect = utils.expect;
 const expectThrow = utils.expectThrow;
 const inBaseUnits = utils.inBaseUnits(18);
 const ether = utils.ether;
+const getBalance = utils.getBalance;
 
-contract("LeapPreTokensale", function([_, investor, proxy, wallet, placeholder]) {
+contract("LeapPreTokensale", function([_, investor, proxy, placeholder, kownWallet, leapWallet]) {
 	const firstStageRaised = new web3.BigNumber(inBaseUnits(15003000));
 	const secondStageRaised = new web3.BigNumber(inBaseUnits(29001450));
 	const thirdStageRaised = new web3.BigNumber(inBaseUnits(41995550));
@@ -27,7 +28,7 @@ contract("LeapPreTokensale", function([_, investor, proxy, wallet, placeholder])
 
 		this.tokensale = await Tokensale.new(
 			utils.latestTime() + 3600,
-			this.token.address, proxy, placeholder, wallet
+			this.token.address, proxy, placeholder, kownWallet, leapWallet
 		);
 
 		await this.token.transferOwnership(this.tokensale.address);
@@ -36,7 +37,7 @@ contract("LeapPreTokensale", function([_, investor, proxy, wallet, placeholder])
 	it("should behave like basic tokensale", async function() {
 		expect(await this.tokensale.token()).to.be.equal(this.token.address);
 		expect(await this.tokensale.proxy()).to.be.equal(proxy);
-		expect(await this.tokensale.wallet()).to.be.equal(wallet);
+		expect(await this.tokensale.wallet()).to.be.equal(kownWallet);
 		expect(await this.tokensale.placeholder()).to.be.equal(placeholder);
 	});
 
@@ -67,4 +68,28 @@ contract("LeapPreTokensale", function([_, investor, proxy, wallet, placeholder])
 		expect(supplySecondStage).to.be.bignumber.equal(firstStageRaised.plus(secondStageRaised).div(divider));
 		expect(supplyThirdStage).to.be.bignumber.equal(firstStageRaised.plus(secondStageRaised).plus(thirdStageRaised).div(divider));
 	});
+
+
+	it("should distribute funds between two wallets equally", async function() {
+		await utils.setTime(await this.tokensale.startTime());
+
+		const halfOfInvestment = ether(1).div(2);
+
+		const kownWalletBalanceBefore = new web3.BigNumber(await getBalance(kownWallet));
+		const leapWalletBalanceBefore = new web3.BigNumber(await getBalance(leapWallet));
+
+		await this.tokensale.buyCoinsETH({from: investor, value: ether(1)});
+
+		const kownWalletBalanceAfter = new web3.BigNumber(await getBalance(kownWallet));
+		const leapWalletBalanceAfter = new web3.BigNumber(await getBalance(leapWallet));
+
+		const receivedFundsByKown = kownWalletBalanceAfter.minus(kownWalletBalanceBefore);
+		const receivedFundsByLeap = leapWalletBalanceAfter.minus(leapWalletBalanceBefore);
+
+		expect(kownWalletBalanceAfter).to.be.bignumber.above(kownWalletBalanceBefore);
+		expect(leapWalletBalanceAfter).to.be.bignumber.above(leapWalletBalanceBefore);
+
+		expect(receivedFundsByLeap).to.be.bignumber.equal(receivedFundsByKown);
+	});
+
 });
