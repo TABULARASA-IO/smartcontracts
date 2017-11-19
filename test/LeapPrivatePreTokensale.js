@@ -78,7 +78,7 @@ contract("LeapPrivatePreTokensale", function([deployer, token, placeholder, prox
 
 		expect(coinsAmount).to.be.bignumber.equal(expectedCoinsAmount);
 		expect(await this.tokensale.leapRaised()).to.be.bignumber.equal(expectedCoinsAmount);
-		expect(await this.token.balanceOf(account)).to.be.bignumber.equal(expectedCoinsAmount);
+		expect(await this.tokensale.balanceOf(account)).to.be.bignumber.equal(expectedCoinsAmount);
 		expect(await this.tokensale.weiRaisedBy(investor)).to.be.bignumber.equal(ethInvestment);
 	});
 
@@ -95,7 +95,7 @@ contract("LeapPrivatePreTokensale", function([deployer, token, placeholder, prox
 
 		expect(coinsAmount).to.be.bignumber.equal(expectedCoinsAmount);
 		expect(await this.tokensale.leapRaised()).to.be.bignumber.equal(expectedCoinsAmount);
-		expect(await this.token.balanceOf(account)).to.be.bignumber.equal(expectedCoinsAmount);
+		expect(await this.tokensale.balanceOf(account)).to.be.bignumber.equal(expectedCoinsAmount);
 		expect(await this.tokensale.satoshiRaisedBy(investor)).to.be.bignumber.equal(btcInvestment);
 	});
 
