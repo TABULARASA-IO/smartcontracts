@@ -97,9 +97,9 @@ contract Tokensale is Ownable {
                     weiAmount = leftForSale.div(rate());
                 }
 
-                address account = issueCoins(beneficiary, coinsAmount);
-
                 leapRaised = leapRaised.add(coinsAmount);
+
+                address account = issueCoins(beneficiary, coinsAmount);
 
                 weiRaisedBy[beneficiary] = weiRaisedBy[beneficiary].add(weiAmount);
 
@@ -146,9 +146,9 @@ contract Tokensale is Ownable {
                     btcAmountPaid = leftForSale.div(btcRate());
                 }
 
-                address account = issueCoins(beneficiary, coinsAmount);
-
                 leapRaised = leapRaised.add(coinsAmount);
+
+                address account = issueCoins(beneficiary, coinsAmount);
 
                 satoshiRaisedBy[beneficiary] = satoshiRaisedBy[beneficiary].add(btcAmount);
 
