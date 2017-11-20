@@ -1,6 +1,6 @@
 const LeapTokensalePlaceholder = artifacts.require('LeapTokensalePlaceholder');
 const Tokensale = artifacts.require('LeapPrivatePreTokensaleFake');
-const Token = artifacts.require('Token');
+const Token = artifacts.require('LEAP');
 const BitcoinProxy = artifacts.require('BitcoinProxy');
 
 const utils = require('./utils');

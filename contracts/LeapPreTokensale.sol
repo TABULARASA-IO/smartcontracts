@@ -45,10 +45,10 @@ contract LeapPreTokensale is Tokensale {
     }
 
     function forwardFunds(uint256 amount) internal {
-        uint256 halfOfPayment = msg.value.div(2);
+        uint256 halfOfPayment = amount.div(2);
 
         wallet.transfer(halfOfPayment);
-        secondWallet.transfer(halfOfPayment); // test when we have odd amount of wei
+        secondWallet.transfer(amount - halfOfPayment);
     }
 
 }

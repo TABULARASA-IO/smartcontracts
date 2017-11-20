@@ -1,5 +1,5 @@
 const Tokensale = artifacts.require('LeapPreTokensaleFake');
-const Token = artifacts.require('Token');
+const Token = artifacts.require('LEAP');
 
 const utils = require('./utils');
 const expect = utils.expect;
