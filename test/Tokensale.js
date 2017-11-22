@@ -277,4 +277,25 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 
 		expect(investorBalanceRefunded).to.be.bignumber.above(investorBalancePayout);
 	});
+
+	it("should not release tokens for refunded payments", async function() {
+		await utils.setTime(this.startTime);
+
+		const amount = (await this.tokensale.rate()).mul(weiInvestment);
+
+		await this.tokensale.buyCoinsETH({from: investor, value: weiInvestment});
+		await this.tokensale.buyCoinsETH({from: hacker, value: weiInvestment});
+
+		// because he didn't confirm KYC we manually refund his payment
+		await this.tokensale.refund(hacker, { from: deployer, value: weiInvestment });
+
+		// todo: check if here only one Mint event
+		const tx = await this.tokensale.releaseCoins({from: deployer});
+
+		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(0);
+		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(amount);
+
+		expect(await this.tokensale.balanceOf(hacker)).to.be.bignumber.equal(0);
+		expect(await this.token.balanceOf(hacker)).to.be.bignumber.equal(0);
+	});
 });
