@@ -58,16 +58,12 @@ contract Tokensale is Ownable {
     function rate() public constant returns (uint256);
     function forwardFunds(uint256 amount) internal;
 
-    function btcRate() public constant returns (uint256) {
-        return rate().mul(btcMultiplierBasePoints).div(1000);
-    }
-
     function Tokensale(
-    uint256 _startTime,
-    address _token,
-    address _proxy,
-    address _placeholder,
-    address _wallet
+        uint256 _startTime,
+        address _token,
+        address _proxy,
+        address _placeholder,
+        address _wallet
     ) {
         require(_startTime >= now);
 
@@ -79,6 +75,10 @@ contract Tokensale is Ownable {
         wallet = _wallet;
     }
 
+    function btcRate() public constant returns (uint256) {
+        return rate().mul(btcMultiplierBasePoints).div(1000);
+    }
+
     function updateBitcoinMultiplier(uint256 _rate) public onlyOwner {
         btcMultiplierBasePoints = _rate;
         BitcoinRateChanged(_rate);
@@ -87,51 +87,38 @@ contract Tokensale is Ownable {
     function buyCoinsETH() public payable {
         address beneficiary = msg.sender;
 
-        require(validPayment(beneficiary));
-
         require(!isContract(msg.sender));
+
+        require(validPayment(beneficiary));
+        require(msg.value > 0);
 
         uint256 weiAmount = msg.value;
         uint256 leftForSale = hardcap().sub(leapRaised);
 
-        if(weiAmount > 0) {
-            if(leftForSale > 0) {
-                uint256 coinsAmount = weiAmount.mul(rate());
+        uint256 coinsAmount = weiAmount.mul(rate());
 
-                if(coinsAmount > leftForSale) {
-                    coinsAmount = leftForSale;
-                    weiAmount = leftForSale.div(rate());
-                }
-
-                leapRaised = leapRaised.add(coinsAmount);
-
-                address account = issueCoins(beneficiary, coinsAmount);
-
-                weiRaisedBy[beneficiary] = weiRaisedBy[beneficiary].add(weiAmount);
-
-                TokenPurchaseETH(beneficiary, account, weiAmount, coinsAmount);
-
-                forwardFunds(weiAmount);
-            } else {
-                weiAmount = 0;
-            }
+        if(coinsAmount > leftForSale) {
+            coinsAmount = leftForSale;
+            weiAmount = leftForSale.div(rate());
         }
 
+        leapRaised = leapRaised.add(coinsAmount);
+
+        address account = issueCoins(beneficiary, coinsAmount);
+
+        weiRaisedBy[beneficiary] = weiRaisedBy[beneficiary].add(weiAmount);
+
+        TokenPurchaseETH(beneficiary, account, weiAmount, coinsAmount);
+
+        forwardFunds(weiAmount);
+
         uint256 charge = msg.value.sub(weiAmount);
+
         if(charge > 0) {
             msg.sender.transfer(charge);
 
             ETHCharge(charge, msg.sender);
         }
-    }
-
-    function isContract(address _addr) constant internal returns (bool) {
-        if (_addr == 0) return false;
-        uint256 size;
-        assembly {
-        size := extcodesize(_addr)
-        }
-        return (size > 0);
     }
 
     function buyCoinsBTC(address beneficiary, uint256 btcAmount)
@@ -143,26 +130,22 @@ contract Tokensale is Ownable {
 
         uint256 btcAmountPaid = btcAmount;
 
-        if(btcAmountPaid > 0) {
-            if(leftForSale > 0) {
-                uint256 coinsAmount = btcAmount.mul(btcRate());
+        require(btcAmountPaid > 0);
 
-                if(coinsAmount > leftForSale) {
-                    coinsAmount = leftForSale;
-                    btcAmountPaid = leftForSale.div(btcRate());
-                }
+        uint256 coinsAmount = btcAmount.mul(btcRate());
 
-                leapRaised = leapRaised.add(coinsAmount);
-
-                address account = issueCoins(beneficiary, coinsAmount);
-
-                satoshiRaisedBy[beneficiary] = satoshiRaisedBy[beneficiary].add(btcAmount);
-
-                TokenPurchaseBTC(beneficiary, account, btcAmount, coinsAmount);
-            } else {
-                btcAmountPaid = 0;
-            }
+        if(coinsAmount > leftForSale) {
+            coinsAmount = leftForSale;
+            btcAmountPaid = leftForSale.div(btcRate());
         }
+
+        leapRaised = leapRaised.add(coinsAmount);
+
+        address account = issueCoins(beneficiary, coinsAmount);
+
+        satoshiRaisedBy[beneficiary] = satoshiRaisedBy[beneficiary].add(btcAmount);
+
+        TokenPurchaseBTC(beneficiary, account, btcAmount, coinsAmount);
 
         uint256 charge = btcAmount.sub(btcAmountPaid);
         if(charge > 0) {
@@ -179,10 +162,6 @@ contract Tokensale is Ownable {
         lockedAccounts[beneficiary].amount= lockedAccounts[beneficiary].amount.add(amount);
 
         return beneficiary;
-    }
-
-    function balanceOf(address beneficiary) public constant returns (uint256) {
-        return lockedAccounts[beneficiary].amount;
     }
 
     function releaseCoins() public onlyOwner {
@@ -203,6 +182,19 @@ contract Tokensale is Ownable {
         lockedAccounts[beneficiary].amount = 0;
 
         beneficiary.transfer(msg.value);
+    }
+
+    function isContract(address _addr) constant internal returns (bool) {
+        if (_addr == 0) return false;
+        uint256 size;
+        assembly {
+        size := extcodesize(_addr)
+        }
+        return (size > 0);
+    }
+
+    function balanceOf(address beneficiary) public constant returns (uint256) {
+        return lockedAccounts[beneficiary].amount;
     }
 
     function finalize() public notFinalized onlyOwner {
