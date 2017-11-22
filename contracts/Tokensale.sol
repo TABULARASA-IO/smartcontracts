@@ -164,7 +164,7 @@ contract Tokensale is Ownable {
         return beneficiary;
     }
 
-    function releaseCoins() public onlyOwner {
+    function releaseCoins() internal {
         for(uint256 i = 0; i < accountsIndex.length; i++) {
             address beneficiary = accountsIndex[i];
             uint256 balance = lockedAccounts[beneficiary].amount;
@@ -208,6 +208,7 @@ contract Tokensale is Ownable {
     }
 
     function finalization() internal {
+        releaseCoins();
         token.transferOwnership(placeholder);
     }
 

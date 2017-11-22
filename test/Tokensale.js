@@ -252,7 +252,8 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(amount);
 		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(0);
 
-		await this.tokensale.releaseCoins({from: deployer});
+		await utils.setTime(this.endTime);
+		await this.tokensale.finalize({from: deployer});
 
 		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(0);
 		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(amount);
@@ -290,7 +291,8 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		await this.tokensale.refund(hacker, { from: deployer, value: weiInvestment });
 
 		// todo: check if here only one Mint event
-		const tx = await this.tokensale.releaseCoins({from: deployer});
+		await utils.setTime(this.endTime);
+		await this.tokensale.finalize({from: deployer});
 
 		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(0);
 		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(amount);

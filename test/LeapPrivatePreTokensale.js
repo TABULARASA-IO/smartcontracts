@@ -106,7 +106,8 @@ contract("LeapPrivatePreTokensale", function([deployer, token, placeholder, prox
 		const investment = hardcapEth.div(testingDivider);
 		const expectedAmount = investment.mul(ethRate);
 
-		await expectThrow(this.tokensale.buyCoinsETH({from: investor, value: hardcapEth.plus(ether(0.001)).div(testingDivider)}));
+		// should send back change not fail
+		//await expectThrow(this.tokensale.buyCoinsETH({from: investor, value: hardcapEth.plus(ether(0.001)).div(testingDivider)}));
 
 		await this.tokensale.buyCoinsETH({from: investor, value: investment});
 
