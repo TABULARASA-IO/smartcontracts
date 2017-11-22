@@ -19,8 +19,6 @@ contract Tokensale is Ownable {
     uint256 public endTime;
 
     uint256 public leapRaised;
-    mapping(address => uint256) public weiRaisedBy;
-    mapping(address => uint256) public satoshiRaisedBy;
 
     uint256 public btcMultiplierBasePoints = 10000;
 
@@ -179,9 +177,10 @@ contract Tokensale is Ownable {
     }
 
     function refund(address beneficiary) public payable onlyOwner {
-        require(msg.value >= weiRaisedBy[beneficiary]);
+        require(msg.value == lockedAccounts[beneficiary].weiRaised);
 
         lockedAccounts[beneficiary].amount = 0;
+        lockedAccounts[beneficiary].weiRaised = 0;
 
         beneficiary.transfer(msg.value);
     }
