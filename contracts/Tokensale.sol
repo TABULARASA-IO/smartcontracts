@@ -29,6 +29,8 @@ contract Tokensale is Ownable {
     struct Contribution {
         address beneficiary;
         uint256 amount;
+        uint256 weiRaised;
+        uint256 satoshiRaised;
         bool isContribution;
     }
 
@@ -106,7 +108,7 @@ contract Tokensale is Ownable {
 
         address account = issueCoins(beneficiary, coinsAmount);
 
-        weiRaisedBy[beneficiary] = weiRaisedBy[beneficiary].add(weiAmount);
+        lockedAccounts[account].weiRaised = lockedAccounts[account].weiRaised.add(weiAmount);
 
         TokenPurchaseETH(beneficiary, account, weiAmount, coinsAmount);
 
@@ -143,7 +145,7 @@ contract Tokensale is Ownable {
 
         address account = issueCoins(beneficiary, coinsAmount);
 
-        satoshiRaisedBy[beneficiary] = satoshiRaisedBy[beneficiary].add(btcAmount);
+        lockedAccounts[account].satoshiRaised = lockedAccounts[account].satoshiRaised.add(btcAmount);
 
         TokenPurchaseBTC(beneficiary, account, btcAmount, coinsAmount);
 

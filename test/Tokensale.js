@@ -78,7 +78,9 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		expect(await this.tokensale.leapRaised()).to.be.bignumber.equal(expectedCoinsAmount);
 
 		// increase wei by investor payments counter
-		expect(await this.tokensale.weiRaisedBy(investor)).to.be.bignumber.equal(weiInvestment);
+		const accountStruct = await this.tokensale.lockedAccounts(investor);
+
+		expect(accountStruct[2]).to.be.bignumber.equal(weiInvestment);
 
 		// increase token total supply
 		// expect(await this.token.totalSupply()).to.be.bignumber.equal(expectedCoinsAmount);
@@ -113,7 +115,8 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		// expect(await TokenHolder.at(account).beneficiary()).to.be.bignumber.equal(investor);
 
 		// increase btc by investor payments counter
-		expect(await this.tokensale.satoshiRaisedBy(investor)).to.be.bignumber.equal(btcInvestment);
+		const accountStruct = await this.tokensale.lockedAccounts(investor);
+		expect(accountStruct[3]).to.be.bignumber.equal(btcInvestment);
 
 		// increase leap payments counter
 		expect(await this.tokensale.leapRaised()).to.be.bignumber.equal(expectedCoinsAmount);
@@ -313,7 +316,9 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 
 		const contributorsAfter = await this.tokensale.getContributorsCount();
 
-		expect(await this.tokensale.weiRaisedBy(investor)).to.be.bignumber.equal(weiInvestment.mul(2));
+		const accountStruct = await this.tokensale.lockedAccounts(investor);
+
+		expect(accountStruct[2]).to.be.bignumber.equal(weiInvestment.mul(2));
 		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(amount.mul(2));
 
 		expect(contributorsBefore).to.be.bignumber.equal(0);
