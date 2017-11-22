@@ -220,7 +220,7 @@ contract Tokensale is Ownable {
     }
 
     function hasEnded() public constant returns (bool) {
-        return (leapRaised >= hardcap()) || (now >= endTime);
+        return (leapRaised >= hardcap() - rate()) || (now >= endTime);
     }
 
     function validPayment(address beneficiary) public constant returns (bool) {
