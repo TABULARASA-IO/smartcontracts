@@ -26,7 +26,13 @@ contract Tokensale is Ownable {
 
     bool public isFinalized = false;
 
-    mapping(address => uint256) public lockedAccounts;
+    struct Contribution {
+        address beneficiary;
+        uint256 amount;
+        bool isContribution;
+    }
+
+    mapping(address => Contribution) public lockedAccounts;
     address[] public accountsIndex;
 
     event TokenPurchaseETH(address beneficiary, address account, uint256 weiAmount, uint256 coinsAmount);
@@ -165,24 +171,27 @@ contract Tokensale is Ownable {
     }
 
     function issueCoins(address beneficiary, uint256 amount) internal returns(address) {
-        accountsIndex.push(beneficiary);
+        if(lockedAccounts[beneficiary].isContribution == false) {
+            accountsIndex.push(beneficiary);
+        }
 
-        lockedAccounts[beneficiary] = lockedAccounts[beneficiary].add(amount);
+        lockedAccounts[beneficiary].isContribution = true;
+        lockedAccounts[beneficiary].amount= lockedAccounts[beneficiary].amount.add(amount);
 
         return beneficiary;
     }
 
     function balanceOf(address beneficiary) public constant returns (uint256) {
-        return lockedAccounts[beneficiary];
+        return lockedAccounts[beneficiary].amount;
     }
 
     function releaseCoins() public onlyOwner {
         for(uint256 i = 0; i < accountsIndex.length; i++) {
             address beneficiary = accountsIndex[i];
-            uint256 balance = lockedAccounts[beneficiary];
+            uint256 balance = lockedAccounts[beneficiary].amount;
 
             if(balance > 0) {
-                lockedAccounts[beneficiary] = 0;
+                lockedAccounts[beneficiary].amount = 0;
                 token.mint(beneficiary, balance);
             }
         }
@@ -191,7 +200,7 @@ contract Tokensale is Ownable {
     function refund(address beneficiary) public payable onlyOwner {
         require(msg.value >= weiRaisedBy[beneficiary]);
 
-        lockedAccounts[beneficiary] = 0;
+        lockedAccounts[beneficiary].amount = 0;
 
         beneficiary.transfer(msg.value);
     }
@@ -220,5 +229,9 @@ contract Tokensale is Ownable {
         bool accountExists = beneficiary != 0x0;
 
         return withinPeriod && withinCap && accountExists;
+    }
+
+    function getContributorsCount() public constant returns (uint256) {
+        return accountsIndex.length;
     }
 }

@@ -298,4 +298,23 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		expect(await this.tokensale.balanceOf(hacker)).to.be.bignumber.equal(0);
 		expect(await this.token.balanceOf(hacker)).to.be.bignumber.equal(0);
 	});
+
+	it("should handle multiple payments", async function() {
+		await utils.setTime(this.startTime);
+
+		const amount = (await this.tokensale.rate()).mul(weiInvestment);
+
+		const contributorsBefore = await this.tokensale.getContributorsCount();
+
+		await this.tokensale.buyCoinsETH({from: investor, value: weiInvestment});
+		await this.tokensale.buyCoinsETH({from: investor, value: weiInvestment});
+
+		const contributorsAfter = await this.tokensale.getContributorsCount();
+
+		expect(await this.tokensale.weiRaisedBy(investor)).to.be.bignumber.equal(weiInvestment.mul(2));
+		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(amount.mul(2));
+
+		expect(contributorsBefore).to.be.bignumber.equal(0);
+		expect(contributorsAfter).to.be.bignumber.equal(1);
+	});
 });
