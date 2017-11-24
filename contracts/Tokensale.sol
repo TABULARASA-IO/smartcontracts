@@ -143,9 +143,9 @@ contract Tokensale is Ownable {
 
         address account = issueCoins(beneficiary, coinsAmount);
 
-        lockedAccounts[account].satoshiRaised = lockedAccounts[account].satoshiRaised.add(btcAmount);
+        lockedAccounts[account].satoshiRaised = lockedAccounts[account].satoshiRaised.add(btcAmountPaid);
 
-        TokenPurchaseBTC(beneficiary, account, btcAmount, coinsAmount);
+        TokenPurchaseBTC(beneficiary, account, btcAmountPaid, coinsAmount);
 
         uint256 charge = btcAmount.sub(btcAmountPaid);
         if(charge > 0) {
@@ -159,7 +159,7 @@ contract Tokensale is Ownable {
         }
 
         lockedAccounts[beneficiary].isContribution = true;
-        lockedAccounts[beneficiary].amount= lockedAccounts[beneficiary].amount.add(amount);
+        lockedAccounts[beneficiary].amount = lockedAccounts[beneficiary].amount.add(amount);
 
         return beneficiary;
     }
@@ -181,6 +181,7 @@ contract Tokensale is Ownable {
 
         lockedAccounts[beneficiary].amount = 0;
         lockedAccounts[beneficiary].weiRaised = 0;
+        lockedAccounts[beneficiary].satoshiRaised = 0;
 
         beneficiary.transfer(msg.value);
     }
