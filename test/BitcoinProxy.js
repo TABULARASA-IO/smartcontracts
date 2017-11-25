@@ -1,5 +1,6 @@
 const BitcoinProxy = artifacts.require('BitcoinProxy');
 const Tokensale = artifacts.require('TokensaleFake');
+const Token = artifacts.require('LEAP');
 
 const utils = require('./utils');
 const expect = utils.expect;
@@ -7,7 +8,7 @@ const expectThrow = utils.expectThrow;
 
 const bs58 = require('bs58');
 
-contract("BitcoinProxy", function([deployer, investor, hacker, token, placeholder, wallet]) {
+contract("BitcoinProxy", function([deployer, investor, hacker, placeholder, wallet]) {
 	const satoshiAmount = 12345678;
 	const rawBtcWallet = "1MaTeTiCCGFvgmZxK2R1pmD9LDWvkmU9BS";
 	const hash = 0x123;
@@ -24,16 +25,20 @@ contract("BitcoinProxy", function([deployer, investor, hacker, token, placeholde
 
 	beforeEach(async function() {
 		this.proxy = await BitcoinProxy.new(deployer, btcWallet);
+		this.token = await Token.new();
 
 		this.tokensale = await Tokensale.new(
 			utils.latestTime() + 3600,
-			token,
+			this.token.address,
 			this.proxy.address,
 			placeholder,
 			wallet
 		);
 
 		await this.proxy.setTokensale(this.tokensale.address);
+		await this.token.transferOwnership(this.tokensale.address);
+
+		await utils.setTime(utils.latestTime() + 3600);
 	});
 
 	it("should be initialized correctly", async function() {
@@ -76,7 +81,6 @@ contract("BitcoinProxy", function([deployer, investor, hacker, token, placeholde
 
 		const tx = await this.proxy.processTransaction(transaction, hash);
 
-		expect(tx.logs[0].args['beneficiary']).to.be.equal(investor);
-		expect(tx.logs[1].args['btcAmount']).to.be.bignumber.equal(satoshiAmount);
+		await expectThrow(this.proxy.processTransaction(transaction, hash));
 	});
 });
