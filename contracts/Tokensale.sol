@@ -83,6 +83,10 @@ contract Tokensale is Ownable {
         BitcoinRateChanged(_rate);
     }
 
+    function () payable {
+        buyCoinsETH();
+    }
+
     function buyCoinsETH() public payable {
         address beneficiary = msg.sender;
 

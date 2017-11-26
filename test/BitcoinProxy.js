@@ -62,10 +62,10 @@ contract("BitcoinProxy", function([deployer, investor, hacker, placeholder, wall
 		await expectThrow(this.proxy.claim(hash, {from: investor}));
 	});
 
-		it("user should not be able to promise multiple payments at once", async function() {
-			await this.proxy.promise(satoshiAmount, {from: investor});
-			await expectThrow(this.proxy.promise(satoshiAmount * 2, {from: investor}));
-		});
+	it("user should not be able to promise multiple payments at once", async function() {
+		await this.proxy.promise(satoshiAmount, {from: investor});
+		await expectThrow(this.proxy.promise(satoshiAmount * 2, {from: investor}));
+	});
 
 	it("user should not be able to reclaim transaction", async function() {
 		await this.proxy.promise(satoshiAmount, {from: investor});
@@ -83,4 +83,8 @@ contract("BitcoinProxy", function([deployer, investor, hacker, placeholder, wall
 
 		await expectThrow(this.proxy.processTransaction(transaction, hash));
 	});
+
+	it("should relay bitcoin transaction", async function() {
+		await this.proxy.setBitcoinWallet()
+	})
 });

@@ -131,12 +131,17 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 	it("should should reject zero payments", async function() {
 		await utils.setTime(this.startTime);
 
-		await this.tokensale.buyCoinsETH({from: investor, value: 1});
 		await expectThrow(this.tokensale.buyCoinsETH({from: investor, value: 0}));
 	});
 
-	it("should reject direct payments", async function() {
-		await expectThrow(this.tokensale.sendTransaction({ value: weiInvestment, from: investor }));
+	it("should allow direct payments", async function() {
+		await utils.setTime(this.startTime);
+
+		const expectedCoinsAmount = (await this.tokensale.rate()).mul(weiInvestment);
+
+		await this.tokensale.sendTransaction({from: investor, value: weiInvestment});
+
+		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(expectedCoinsAmount);
 	});
 
 	it("should reject payments before start", async function() {
