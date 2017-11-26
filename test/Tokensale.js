@@ -128,6 +128,13 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		expect(await this.tokensale.balanceOf(account)).to.be.bignumber.equal(expectedCoinsAmount);
 	});
 
+	it("should should reject zero payments", async function() {
+		await utils.setTime(this.startTime);
+
+		await this.tokensale.buyCoinsETH({from: investor, value: 1});
+		await expectThrow(this.tokensale.buyCoinsETH({from: investor, value: 0}));
+	});
+
 	it("should reject direct payments", async function() {
 		await expectThrow(this.tokensale.sendTransaction({ value: weiInvestment, from: investor }));
 	});
