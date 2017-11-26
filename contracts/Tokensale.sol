@@ -167,8 +167,9 @@ contract Tokensale is Ownable {
         for(uint256 i = 0; i < accountsIndex.length; i++) {
             address beneficiary = accountsIndex[i];
             uint256 balance = lockedAccounts[beneficiary].amount;
+            bool isContribution = lockedAccounts[beneficiary].isContribution;
 
-            if(balance > 0) {
+            if(balance > 0 && isContribution) {
                 lockedAccounts[beneficiary].amount = 0;
                 token.mint(beneficiary, balance);
             }
