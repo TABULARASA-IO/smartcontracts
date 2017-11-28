@@ -75,7 +75,7 @@ contract Tokensale is Ownable {
     }
 
     function btcRate() public constant returns (uint256) {
-        return rate().mul(btcMultiplierBasePoints).div(1000);
+        return rate().mul(btcMultiplierBasePoints).div(1000).mul(1e10);
     }
 
     function updateBitcoinMultiplier(uint256 _rate) public onlyOwner {
