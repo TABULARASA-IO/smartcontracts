@@ -11,11 +11,12 @@ const TokensaleFake = artifacts.require('TokensaleFake');
 const LeapPrivatePreTokensaleFake = artifacts.require('LeapPrivatePreTokensaleFake');
 const LeapPreTokensaleFake = artifacts.require('LeapPreTokensaleFake');
 const LeapTokensaleFake = artifacts.require('LeapTokensaleFake');
+const BitcoinProxyNoGas = artifacts.require('BitcoinProxyNoGas');
 
 module.exports = function(deployer) {
 	deployer.deploy(ECRecovery);
 	deployer.deploy(BTC);
 
 	deployer.link(ECRecovery, [TokenHolder,  LeapPreTokensale, LeapPrivatePreTokensale, LeapTokensale, TokensaleFake, LeapPrivatePreTokensaleFake, LeapPreTokensaleFake, LeapTokensaleFake]);
-	deployer.link(BTC, BitcoinProxy);
+	deployer.link(BTC, [BitcoinProxy, BitcoinProxyNoGas]);
 };

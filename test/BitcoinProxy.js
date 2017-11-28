@@ -10,10 +10,6 @@ const bs58 = require('bs58');
 
 contract("BitcoinProxy", function([deployer, investor, hacker, placeholder, wallet]) {
 	const satoshiAmount = 12345678;
-	// 0.1 BTC = 5000e18 coins
-	// 12345678 Satoshi = 6172.8390e18 coins
-	// 10e8 Satoshi = 10e18 wei * 10
-	// 1 Satoshi = 10e10 wei * 10
 	const rawBtcWallet = "1MaTeTiCCGFvgmZxK2R1pmD9LDWvkmU9BS";
 	const hash = 0x123;
 	const expectedCoinsAmount = new web3.BigNumber(6172.8390) * new web3.BigNumber(10).pow(18);
