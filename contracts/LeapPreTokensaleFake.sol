@@ -11,13 +11,11 @@ contract LeapPreTokensaleFake is LeapPreTokensale {
     function LeapPreTokensaleFake (
         uint256 _startTime,
         address _token,
-        address _proxy,
         address _placeholder,
         address _wallet, address _secondWallet
     ) LeapPreTokensale (
         _startTime,
         _token,
-        _proxy,
         _placeholder,
         _wallet, _secondWallet) {
     }

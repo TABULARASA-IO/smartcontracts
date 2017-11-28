@@ -12,7 +12,7 @@ const expectThrow = utils.expectThrow;
 
 contract("Tokensale", function([deployer, investor, signer, hacker, proxy, wallet1, wallet2, wallet3, wallet4, wallet5]) {
 	const weiInvestment = utils.ether(1);
-	const btcInvestment = new web3.BigNumber(10).pow(17); // 0.1 btc
+	const btcInvestment = new web3.BigNumber(10).pow(7); // 0.1 btc
 
 	before(async function() {
 		await utils.advanceBlock();
@@ -30,12 +30,13 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		this.tokensale = await Tokensale.new(
 			this.startTime,
 			this.token.address,
-			proxy,
 			this.placeholder.address,
 			this.wallet.address
 		);
 
 		this.endTime = await this.tokensale.endTime();
+
+		await this.tokensale.setBitcoinProxy(proxy);
 
 		await this.token.transferOwnership(this.tokensale.address);
 	});

@@ -28,8 +28,10 @@ contract("LeapPreTokensale", function([_, investor, proxy, placeholder, kownWall
 
 		this.tokensale = await Tokensale.new(
 			utils.latestTime() + 3600,
-			this.token.address, proxy, placeholder, kownWallet, leapWallet
+			this.token.address, placeholder, kownWallet, leapWallet
 		);
+
+		await this.tokensale.setBitcoinProxy(proxy);
 
 		await this.token.transferOwnership(this.tokensale.address);
 	});

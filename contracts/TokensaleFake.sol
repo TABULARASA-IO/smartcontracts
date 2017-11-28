@@ -6,12 +6,10 @@ contract TokensaleFake is Tokensale {
     function TokensaleFake(
         uint _startTime,
         address _token,
-        address _proxy,
         address _placeholder,
         address _wallet) Tokensale(
         _startTime,
         _token,
-        _proxy,
         _placeholder,
         _wallet
     ) {

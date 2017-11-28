@@ -9,9 +9,8 @@ contract Tokensale is Ownable {
     using SafeMath for uint256;
 
     address public wallet;
-
+    address public proxy;
     MintableToken public token;
-    BitcoinProxy public proxy;
     LeapTokensalePlaceholder public placeholder;
 
     uint256 public startTime;
@@ -47,7 +46,7 @@ contract Tokensale is Ownable {
     }
 
     modifier onlyFromBitcoinProxy() {
-        require(msg.sender == address(proxy));
+        require(msg.sender == proxy);
         _;
     }
 
@@ -60,7 +59,6 @@ contract Tokensale is Ownable {
     function Tokensale(
         uint256 _startTime,
         address _token,
-        address _proxy,
         address _placeholder,
         address _wallet
     ) {
@@ -69,9 +67,12 @@ contract Tokensale is Ownable {
         startTime = _startTime;
         endTime = startTime + duration();
         token = LEAP(_token);
-        proxy = BitcoinProxy(_proxy);
         placeholder = LeapTokensalePlaceholder(_placeholder);
         wallet = _wallet;
+    }
+
+    function setBitcoinProxy(address _relay) {
+        proxy = _relay;
     }
 
     function btcRate() public constant returns (uint256) {

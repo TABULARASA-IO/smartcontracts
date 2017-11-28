@@ -18,9 +18,10 @@ contract BitcoinProxy is Ownable {
 
     mapping(uint256 => bool) public processed;
 
-    function BitcoinProxy(address _btcRelay, bytes20 _btcWallet) {
+    function BitcoinProxy(address _btcRelay, bytes20 _btcWallet, address _tokensale) {
         btcRelay = _btcRelay;
         btcWallet = _btcWallet;
+        tokensale = Tokensale(_tokensale);
     }
 
     function processTransaction(bytes txBytes, uint256 txHash)
@@ -37,9 +38,9 @@ contract BitcoinProxy is Ownable {
             processed[txHash] = true;
             delete promises[beneficiary];
             tokensale.buyCoinsBTC(beneficiary, satoshiAmount);
-            return 0;
-        } else {
             return 1;
+        } else {
+            return 0;
         }
     }
 
@@ -54,12 +55,6 @@ contract BitcoinProxy is Ownable {
         require(claimed[hash] == 0x0);
 
         claimed[hash] = msg.sender;
-    }
-
-    function setTokensale(address _tokensale)
-        onlyOwner {
-
-        tokensale = Tokensale(_tokensale);
     }
 
     modifier onlyFromRelay() {

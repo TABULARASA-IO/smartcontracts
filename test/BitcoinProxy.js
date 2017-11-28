@@ -28,18 +28,18 @@ contract("BitcoinProxy", function([deployer, investor, hacker, placeholder, wall
 	}
 
 	beforeEach(async function() {
-		this.proxy = await BitcoinProxy.new(deployer, btcWallet);
 		this.token = await Token.new();
 
 		this.tokensale = await Tokensale.new(
 			utils.latestTime() + 3600,
 			this.token.address,
-			this.proxy.address,
 			placeholder,
 			wallet
 		);
 
-		await this.proxy.setTokensale(this.tokensale.address);
+		this.proxy = await BitcoinProxy.new(deployer, btcWallet, this.tokensale.address);
+
+		await this.tokensale.setBitcoinProxy(this.proxy.address);
 		await this.token.transferOwnership(this.tokensale.address);
 
 		await utils.setTime(utils.latestTime() + 3600);

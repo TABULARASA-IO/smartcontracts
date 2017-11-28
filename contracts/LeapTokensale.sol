@@ -6,7 +6,6 @@ contract LeapTokensale is Tokensale {
     function LeapTokensale(
         uint256 _startTime,
         address _token,
-        address _proxy,
         address _placeholder,
         address _wallet,
         address _bounty,
@@ -16,7 +15,6 @@ contract LeapTokensale is Tokensale {
     ) Tokensale(
         _startTime,
         _token,
-        _proxy,
         _placeholder,
         _wallet
         ) {

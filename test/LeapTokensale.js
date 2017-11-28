@@ -46,9 +46,11 @@ contract("LeapTokensale", function([_, investor, proxy, wallet, placeholder, bou
 
 		this.tokensale = await Tokensale.new(
 			utils.latestTime() + 3600,
-			this.token.address, proxy, placeholder, wallet,
+			this.token.address, placeholder, wallet,
 			bounty, team, ecosystem, reserve
 		);
+
+		await this.tokensale.setBitcoinProxy(proxy);
 
 		await this.token.mint(investor, contributorsCoins);
 

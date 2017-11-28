@@ -11,7 +11,6 @@ contract LeapTokensaleFake is LeapTokensale {
     function LeapTokensaleFake (
     uint256 _startTime,
     address _token,
-    address _proxy,
     address _placeholder,
     address _wallet,
     address _bounty,
@@ -21,7 +20,6 @@ contract LeapTokensaleFake is LeapTokensale {
     ) LeapTokensale (
         _startTime,
         _token,
-        _proxy,
         _placeholder,
         _wallet,
         _bounty,
