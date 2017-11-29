@@ -284,17 +284,21 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		await utils.setTime(this.startTime);
 
 		const amount = (await this.tokensale.rate()).mul(weiInvestment);
-
-		const contributorsBefore = await this.tokensale.getContributorsCount();
-
+		
 		await this.tokensale.buyCoinsETH({from: investor, value: weiInvestment});
 		await this.tokensale.buyCoinsETH({from: investor, value: weiInvestment});
-
-		const contributorsAfter = await this.tokensale.getContributorsCount();
 
 		const accountStruct = await this.tokensale.lockedAccounts(investor);
 
 		expect(accountStruct[2]).to.be.bignumber.equal(weiInvestment.mul(2));
 		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(amount.mul(2));
+	});
+
+	it("owner should be able to change bitcoin proxy at any moment", async function() {
+		await this.tokensale.setBitcoinProxy(investor);
+	});
+
+	it("should fail to change bitcoin proxy by non-owner", async function() {
+		await expectThrow(this.tokensale.setBitcoinProxy(investor, {from: hacker}));
 	});
 });
