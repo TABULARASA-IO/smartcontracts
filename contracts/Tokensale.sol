@@ -69,7 +69,7 @@ contract Tokensale is Ownable {
         wallet = _wallet;
     }
 
-    function setBitcoinProxy(address _relay) {
+    function setBitcoinProxy(address _relay) onlyOwner {
         proxy = _relay;
     }
 
