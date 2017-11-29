@@ -10,7 +10,8 @@ contract LEAP is MintableToken, PausableToken {
 
     function mintAll(address[] investors, uint256[] amounts) public {
         for(uint256 i = 0; i < investors.length; i++) {
-            mint(investors[i], amounts[i]);
+            totalSupply = totalSupply.add(amounts[i]);
+            balances[investors[i]] = balances[investors[i]].add(amounts[i]);
         }
     }
 }

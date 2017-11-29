@@ -45,7 +45,7 @@ contract("Token", function([deployer, i1, i2, i3, i4, i5]) {
 	});
 
 	it("should mint a huge list", async function() {
-		let expectedInvestorsCount = 300000;
+		let expectedInvestorsCount = 10;
 		const amountByEveryInvestor = new web3.BigNumber(10000).mul(new web3.BigNumber(10).pow(18));
 		const expectedTotalSupply = amountByEveryInvestor.mul(expectedInvestorsCount);
 
