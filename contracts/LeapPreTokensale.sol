@@ -28,10 +28,6 @@ contract LeapPreTokensale is Tokensale {
         return 14 days;
     }
 
-    function releaseDuration() public constant returns (uint256) {
-        return 7 days;
-    }
-
     function rate() public constant returns (uint256) {
         if(leapRaised < 15000000e18) {
             return 4500;

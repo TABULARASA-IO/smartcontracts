@@ -31,9 +31,6 @@ contract LeapTokensale is Tokensale {
     function duration() public constant returns (uint256) {
         return 14 days;
     }
-    function releaseDuration() public constant returns (uint256) {
-        return 7 days;
-    }
 
     address public bounty;
     address public team;

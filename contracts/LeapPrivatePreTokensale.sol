@@ -25,9 +25,6 @@ contract LeapPrivatePreTokensale is Tokensale {
     function duration() public constant returns (uint256) {
         return 7 days;
     }
-    function releaseDuration() public constant returns (uint256) {
-        return 7 days;
-    }
 
     mapping (address => bool) members;
 

@@ -51,7 +51,6 @@ contract Tokensale is Ownable {
 
     function hardcap() public constant returns (uint256);
     function duration() public constant returns (uint256);
-    function releaseDuration() public constant returns (uint256);
     function rate() public constant returns (uint256);
     function forwardFunds(uint256 amount) internal;
 
