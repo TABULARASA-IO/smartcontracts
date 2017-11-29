@@ -31,7 +31,6 @@ contract Tokensale is Ownable {
     }
 
     mapping(address => Contribution) public lockedAccounts;
-    address[] public accountsIndex;
 
     event TokenPurchaseETH(address beneficiary, address account, uint256 weiAmount, uint256 coinsAmount);
     event TokenPurchaseBTC(address beneficiary, address account, uint256 weiAmount, uint256 coinsAmount);
@@ -158,10 +157,6 @@ contract Tokensale is Ownable {
     }
 
     function issueCoins(address beneficiary, uint256 amount) internal returns(address) {
-        if(lockedAccounts[beneficiary].isContribution == false) {
-            accountsIndex.push(beneficiary);
-        }
-
         lockedAccounts[beneficiary].isContribution = true;
         lockedAccounts[beneficiary].amount = lockedAccounts[beneficiary].amount.add(amount);
 
@@ -219,9 +214,5 @@ contract Tokensale is Ownable {
         bool accountExists = beneficiary != 0x0;
 
         return withinPeriod && withinCap && accountExists;
-    }
-
-    function getContributorsCount() public constant returns (uint256) {
-        return accountsIndex.length;
     }
 }

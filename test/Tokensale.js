@@ -296,8 +296,5 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 
 		expect(accountStruct[2]).to.be.bignumber.equal(weiInvestment.mul(2));
 		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(amount.mul(2));
-
-		expect(contributorsBefore).to.be.bignumber.equal(0);
-		expect(contributorsAfter).to.be.bignumber.equal(1);
 	});
 });
