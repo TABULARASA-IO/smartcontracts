@@ -10,7 +10,7 @@ contract Tokensale is Ownable {
 
     address public wallet;
     address public proxy;
-    MintableToken public token;
+    LEAP public token;
     LeapTokensalePlaceholder public placeholder;
 
     uint256 public startTime;
@@ -169,16 +169,21 @@ contract Tokensale is Ownable {
     }
 
     function releaseCoins() internal {
+        address[] memory beneficiaries = new address[](accountsIndex.length);
+        uint256[] memory balances = new uint256[](accountsIndex.length);
+
         for(uint256 i = 0; i < accountsIndex.length; i++) {
             address beneficiary = accountsIndex[i];
             uint256 balance = lockedAccounts[beneficiary].amount;
-            bool isContribution = lockedAccounts[beneficiary].isContribution;
 
-            if(balance > 0 && isContribution) {
+            if(balance > 0) {
                 lockedAccounts[beneficiary].amount = 0;
-                token.mint(beneficiary, balance);
+                beneficiaries[i] = beneficiary;
+                balances[i] = balance;
             }
         }
+
+        token.mintAll(beneficiaries, balances);
     }
 
     function refund(address beneficiary) public payable onlyOwner {
