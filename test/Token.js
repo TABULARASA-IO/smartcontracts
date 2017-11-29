@@ -4,7 +4,7 @@ const utils = require('./utils.js');
 const expect = utils.expect;
 const expectThrow = utils.expectThrow;
 
-contract("Token", function([deployer, i1, i2, i3, i4, i5]) {
+contract("Token", function([deployer, investor, hacker]) {
 	let token;
 
 	beforeEach(async function() {
@@ -31,36 +31,29 @@ contract("Token", function([deployer, i1, i2, i3, i4, i5]) {
 		await expectThrow(token.send(1));
 	});
 
-	it("should mint the list", async function() {
-		const investors = [i1, i2, i3, i4, i5];
-		const amounts = [100, 200, 300, 0, 500];
+	it("should refund/burn tokens when investor didn't complete KYC", async function() {
+		await token.mint(investor, 1000);
+		const afterMintingAmount = await token.balanceOf(investor);
 
-		token.mintAll(investors, amounts);
+		const tx = await token.refund(investor);
+		const afterRefundingAmount = await token.balanceOf(investor);
+		const loggedEvent = tx.logs.find(e => e.name === 'Refunded');
 
-		expect(await token.balanceOf(i1)).to.be.bignumber.equal(100);
-		expect(await token.balanceOf(i2)).to.be.bignumber.equal(200);
-		expect(await token.balanceOf(i3)).to.be.bignumber.equal(300);
-		expect(await token.balanceOf(i4)).to.be.bignumber.equal(0);
-		expect(await token.balanceOf(i5)).to.be.bignumber.equal(500);
+		expect(loggedEvent.args['investor']).to.be.equal(investor);
+		expect(loggedEvent.args['amount']).to.be.bignumber.equal(1000);
+
+		expect(afterMintingAmount).to.be.bignumber.equal(1000);
+		expect(afterRefundingAmount).to.be.bignumber.equal(0);
+
+		expect(afterMintingAmount).to.be.bignumber.equal(1000);
+		expect(afterRefundingSupply).to.be.bignumber.equal(0);
 	});
 
-	it("should mint a huge list", async function() {
-		let expectedInvestorsCount = 10;
-		const amountByEveryInvestor = new web3.BigNumber(10000).mul(new web3.BigNumber(10).pow(18));
-		const expectedTotalSupply = amountByEveryInvestor.mul(expectedInvestorsCount);
+	it("should fail to refund tokens by hacker", async function() {
+		await token.mint(investor, 1000);
 
-		let investors = [];
-		let amounts = [];
+		await expectThrow(token.refund(investor));
 
-		for(let i = 0; i < expectedInvestorsCount; i++) {
-			investors[i] = i;
-			amounts[i] = amountByEveryInvestor;
-		}
-
-		const tx = await token.mintAll(investors, amounts);
-
-		console.log(tx.receipt.gasUsed);
-
-		expect(await token.totalSupply()).to.be.bignumber.equal(expectedTotalSupply);
+		expect(await token.balanceOf(investor)).to.be.bignumber.equal(1000);
 	});
 });

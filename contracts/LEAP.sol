@@ -8,10 +8,19 @@ contract LEAP is MintableToken, PausableToken {
     string public constant symbol = "LEAP";
     uint8 public constant decimals = 18;
 
-    function mintAll(address[] investors, uint256[] amounts) public {
-        for(uint256 i = 0; i < investors.length; i++) {
-            totalSupply = totalSupply.add(amounts[i]);
-            balances[investors[i]] = balances[investors[i]].add(amounts[i]);
-        }
+    event Refunded(address investor, uint256 amount);
+
+    function refund(address investor) public onlyOwner canMint returns(bool) {
+        require(investor != 0);
+
+        uint256 amount = balances[investor];
+
+        balances[investor] = 0;
+
+        totalSupply = totalSupply.sub(amount);
+
+        Refunded(investor, amount);
+
+        return true;
     }
 }

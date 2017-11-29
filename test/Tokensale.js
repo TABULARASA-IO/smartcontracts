@@ -258,23 +258,6 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		expect(rateBefore).to.be.bignumber.equal(rateAfter);
 	});
 
-	it("should allow owner to release/mint tokens", async function() {
-		await utils.setTime(this.startTime);
-
-		const amount = (await this.tokensale.rate()).mul(weiInvestment);
-
-		await this.tokensale.buyCoinsETH({from: investor, value: weiInvestment});
-
-		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(amount);
-		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(0);
-
-		await utils.setTime(this.endTime);
-		await this.tokensale.finalize({from: deployer});
-
-		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(0);
-		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(amount);
-	});
-
 	it("should allow owner to refund payment when KYC was failed", async function() {
 		await utils.setTime(this.startTime);
 
@@ -285,36 +268,16 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		const investorBalancePayout = await utils.getBalance(investor);
 
 		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(amount);
+		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(amount);
 
 		await this.tokensale.refund(investor, { from: deployer, value: weiInvestment });
 
 		const investorBalanceRefunded = await utils.getBalance(investor)
 
 		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(0);
+		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(0);
 
 		expect(investorBalanceRefunded).to.be.bignumber.above(investorBalancePayout);
-	});
-
-	it("should not release tokens for refunded payments", async function() {
-		await utils.setTime(this.startTime);
-
-		const amount = (await this.tokensale.rate()).mul(weiInvestment);
-
-		await this.tokensale.buyCoinsETH({from: investor, value: weiInvestment});
-		await this.tokensale.buyCoinsETH({from: hacker, value: weiInvestment});
-
-		// because he didn't confirm KYC we manually refund his payment
-		await this.tokensale.refund(hacker, { from: deployer, value: weiInvestment });
-
-		// todo: check if here only one Mint event
-		await utils.setTime(this.endTime);
-		await this.tokensale.finalize({from: deployer});
-
-		expect(await this.tokensale.balanceOf(investor)).to.be.bignumber.equal(0);
-		expect(await this.token.balanceOf(investor)).to.be.bignumber.equal(amount);
-
-		expect(await this.tokensale.balanceOf(hacker)).to.be.bignumber.equal(0);
-		expect(await this.token.balanceOf(hacker)).to.be.bignumber.equal(0);
 	});
 
 	it("should handle multiple payments", async function() {

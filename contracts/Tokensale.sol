@@ -165,25 +165,9 @@ contract Tokensale is Ownable {
         lockedAccounts[beneficiary].isContribution = true;
         lockedAccounts[beneficiary].amount = lockedAccounts[beneficiary].amount.add(amount);
 
+        token.mint(beneficiary, amount);
+
         return beneficiary;
-    }
-
-    function releaseCoins() internal {
-        address[] memory beneficiaries = new address[](accountsIndex.length);
-        uint256[] memory balances = new uint256[](accountsIndex.length);
-
-        for(uint256 i = 0; i < accountsIndex.length; i++) {
-            address beneficiary = accountsIndex[i];
-            uint256 balance = lockedAccounts[beneficiary].amount;
-
-            if(balance > 0) {
-                lockedAccounts[beneficiary].amount = 0;
-                beneficiaries[i] = beneficiary;
-                balances[i] = balance;
-            }
-        }
-
-        token.mintAll(beneficiaries, balances);
     }
 
     function refund(address beneficiary) public payable onlyOwner {
@@ -192,6 +176,8 @@ contract Tokensale is Ownable {
         lockedAccounts[beneficiary].amount = 0;
         lockedAccounts[beneficiary].weiRaised = 0;
         lockedAccounts[beneficiary].satoshiRaised = 0;
+
+        token.refund(beneficiary);
 
         beneficiary.transfer(msg.value);
     }
@@ -220,7 +206,6 @@ contract Tokensale is Ownable {
     }
 
     function finalization() internal {
-        releaseCoins();
         token.transferOwnership(placeholder);
     }
 
