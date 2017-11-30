@@ -5,18 +5,20 @@ let infuraToken = "";
 let mnemonic = "";
 
 if(fs.existsSync("mnemonic")) {
-  mnemonic = fs.readFileSync("mnemonic");
+  mnemonic = fs.readFileSync("mnemonic").toString();
 }
 
 module.exports = {
   networks: {
     mainnet: {
         provider: new HDWalletProvider(mnemonic, "https://mainnet.infura.io/"+infuraToken),
-        network_id: 1
+        network_id: 1,
+        gas: 4e6
     },
     ropsten: {
         provider: new HDWalletProvider(mnemonic, "https://ropsten.infura.io/"+infuraToken),
-        network_id: 3
+        network_id: 3,
+        gas: 4e6
     },
     development: {
         host: "localhost",
