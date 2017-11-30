@@ -8,28 +8,42 @@ import './LeapTokensalePlaceholder.sol';
 contract Tokensale is Ownable {
     using SafeMath for uint256;
 
+    /* Address of secure wallet to send crowdfund contributions to */
     address public wallet;
+
+    /* Address of trusted bitcoin proxy which will process transactions using BTCRelay */
     address public proxy;
+
+    /* Our single token being sold */
     LEAP public token;
+
+    /* Owner of token will be changed to placeholder */
     LeapTokensalePlaceholder public placeholder;
 
+    /* the UNIX timestamp start date of the tokensale */
     uint256 public startTime;
+
+    /* the UNIX timestamp end date of the tokensale */
     uint256 public endTime;
 
+    /* How many coins we have sold through current tokensale */
     uint256 public leapRaised;
 
+    /* It means 1 ETH = 1 BTC */
     uint256 public btcMultiplierBasePoints = 10000;
 
+    /* Has the Tokensale been finalized by a successful call to `finalize` */
     bool public isFinalized = false;
 
     struct Contribution {
-        address beneficiary;
-        uint256 amount;
-        uint256 weiRaised;
-        uint256 satoshiRaised;
-        bool isContribution;
+        address beneficiary; // beneficiary of tokens after they are released
+        uint256 amount; // amount of tokens investor will receive
+        uint256 weiRaised; // how much wei we have from investor
+        uint256 satoshiRaised; // how much satoshi we have from investor
+        bool isContribution; // ensure investor make a contribution
     }
 
+    /* Investors who have participated in current tokensale but should provide KYC */
     mapping(address => Contribution) public lockedAccounts;
 
     event TokenPurchaseETH(address beneficiary, address account, uint256 weiAmount, uint256 coinsAmount);
