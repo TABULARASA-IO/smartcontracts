@@ -10,17 +10,31 @@ contract LEAP is MintableToken, PausableToken {
 
     event Refunded(address investor, uint256 amount);
 
-    function refund(address investor) public onlyOwner canMint returns(bool) {
+    mapping (address => bool) public exOwners;
+
+    modifier anyOfOwners() {
+        require(msg.sender == owner ||
+                exOwners[msg.sender] == true);
+
+        _;
+    }
+
+    function refund(address investor, uint256 toBurn) public anyOfOwners returns(bool) {
         require(investor != 0);
 
         uint256 amount = balances[investor];
 
-        balances[investor] = 0;
+        balances[investor] = amount.sub(toBurn);
 
-        totalSupply = totalSupply.sub(amount);
+        totalSupply = totalSupply.sub(toBurn);
 
         Refunded(investor, amount);
 
         return true;
+    }
+
+    function transferOwnership(address newOwner) onlyOwner {
+        exOwners[owner] = true;
+        super.transferOwnership(newOwner);
     }
 }

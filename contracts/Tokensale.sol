@@ -236,16 +236,20 @@ contract Tokensale is Ownable {
     /** @notice Investor should process KYC.
     *   If investor didn't pass KYC
     *   we will send his payment back and burn his tokens
+    *   We should send him the exactly amount of ether he invested
+    *   We will back BTC payments manually
     *   @param beneficiary The address of investor should be refunded
     */
     function refund(address beneficiary) public payable onlyOwner {
         require(msg.value == lockedAccounts[beneficiary].weiRaised);
 
+        uint256 amount = lockedAccounts[beneficiary].amount;
+
         lockedAccounts[beneficiary].amount = 0;
         lockedAccounts[beneficiary].weiRaised = 0;
         lockedAccounts[beneficiary].satoshiRaised = 0;
 
-        token.refund(beneficiary);
+        token.refund(beneficiary, amount);
 
         beneficiary.transfer(msg.value);
     }

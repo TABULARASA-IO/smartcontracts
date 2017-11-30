@@ -63,6 +63,8 @@ contract LeapTokensale is Tokensale {
         token.mint(ecosystem, toEcosystem);
         token.mint(reserve, toReserve);
 
+        token.unpause();
+
         super.finalization();
     }
 

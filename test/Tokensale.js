@@ -284,7 +284,7 @@ contract("Tokensale", function([deployer, investor, signer, hacker, proxy, walle
 		await utils.setTime(this.startTime);
 
 		const amount = (await this.tokensale.rate()).mul(weiInvestment);
-		
+
 		await this.tokensale.buyCoinsETH({from: investor, value: weiInvestment});
 		await this.tokensale.buyCoinsETH({from: investor, value: weiInvestment});
 
