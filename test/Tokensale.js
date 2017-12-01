@@ -3,7 +3,6 @@ const BitcoinRelayFake = artifacts.require('BitcoinRelayFake');
 const BitcoinProxy = artifacts.require('BitcoinProxy');
 const LeapTokensalePlaceholder = artifacts.require('LeapTokensalePlaceholder');
 const Tokensale = artifacts.require('TokensaleFake');
-const TokenHolder = artifacts.require('TokenHolder');
 const Multisig = artifacts.require('MultiSigWallet');
 
 const utils = require('./utils.js');

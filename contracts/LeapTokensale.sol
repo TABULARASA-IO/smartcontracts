@@ -64,6 +64,7 @@ contract LeapTokensale is Tokensale {
         token.mint(reserve, toReserve);
 
         token.unpause();
+        token.finishRefunding();
 
         super.finalization();
     }

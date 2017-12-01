@@ -10,6 +10,7 @@ contract LEAP is MintableToken, PausableToken {
 
     event Refunded(address investor, uint256 amount);
 
+    bool refundingFinished = false;
     mapping (address => bool) public exOwners;
 
     modifier anyOfOwners() {
@@ -19,7 +20,16 @@ contract LEAP is MintableToken, PausableToken {
         _;
     }
 
-    function refund(address investor, uint256 toBurn) public anyOfOwners returns(bool) {
+    modifier canRefund() {
+        require(!refundingFinished);
+        _;
+    }
+
+    function finishRefunding() onlyOwner {
+        refundingFinished = true;
+    }
+
+    function refund(address investor, uint256 toBurn) public anyOfOwners canRefund returns(bool) {
         require(investor != 0);
 
         uint256 amount = balances[investor];

@@ -122,7 +122,7 @@ contract Tokensale is Ownable {
     *   @return How much coins investor will receive for 1 Satoshi
     */
     function btcRate() public constant returns (uint256) {
-        return rate().mul(btcMultiplierBasePoints).div(1000).mul(1e10);
+        return rate().mul(btcMultiplierBasePoints).div(10000).mul(1e10);
     }
 
     /**

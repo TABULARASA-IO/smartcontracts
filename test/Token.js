@@ -86,4 +86,18 @@ contract("Token", function([deployer, investor, hacker, placeholder]) {
 
 		expect(await token.balanceOf(investor)).to.be.bignumber.equal(1000);
 	});
+
+	it("should finish refunding forever then nobody will be able to burn your tokens", async function() {
+		await token.mint(investor, 1000);
+
+		await token.refund(investor, 100);
+
+		await token.finishRefunding();
+
+		await expectThrow(token.refund(investor, 100));
+
+		await token.transferOwnership(hacker);
+
+		await expectThrow(token.refund(investor, 100));
+	})
 });

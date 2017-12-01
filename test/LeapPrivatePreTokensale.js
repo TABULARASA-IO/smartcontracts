@@ -15,10 +15,10 @@ contract("LeapPrivatePreTokensale", function([deployer, token, placeholder, prox
 	const hardcapEth = ether(10000);
 
 	const ethInvestment = ether(0.001);
-	const btcInvestment = new web3.BigNumber(10).pow(17);
+	const btcInvestment = new web3.BigNumber(10).pow(5);
 
 	const ethRate = new web3.BigNumber(5250); // LEAP/ETH
-	const btcRate = new web3.BigNumber(52500); // ETH/BTC
+	const btcRate = new web3.BigNumber(52500).mul(new web3.BigNumber(10).pow(10)); // ETH/BTC
 
 	const testingDivider = 10000;
 
@@ -36,6 +36,8 @@ contract("LeapPrivatePreTokensale", function([deployer, token, placeholder, prox
 
 		await this.tokensale.setBitcoinProxy(proxy);
 
+		await this.tokensale.updateBitcoinMultiplier(100000);
+
 		await this.token.transferOwnership(this.tokensale.address);
 	});
 
@@ -46,29 +48,14 @@ contract("LeapPrivatePreTokensale", function([deployer, token, placeholder, prox
 		expect(await this.tokensale.wallet()).to.be.equal(kownWallet);
 	});
 
-	it("should allow owner to add members", async function() {
-		await this.tokensale.addMember(investor);
-
-		expect(await this.tokensale.isMember(investor)).to.be.true;
-
-		await expectThrow(this.tokensale.addMember(investor));
-	});
-
-	it("should disallow non-owner to add members", async function() {
-		await expectThrow(this.tokensale.addMember(investor, {from: hacker}));
-	});
-
-	it("should process payments only from members", async function() {
-		await this.tokensale.addMember(investor);
-
+	it("should process payments only from ANYONE", async function() {
 		await utils.setTime(await this.tokensale.startTime());
 
 		expect(await this.tokensale.validPayment(investor)).to.be.true;
-		expect(await this.tokensale.validPayment(hacker)).to.be.false;
+		expect(await this.tokensale.validPayment(hacker)).to.be.true;
 	});
 
 	it("should buy coins with correct eth payments", async function() {
-		await this.tokensale.addMember(investor);
 		await utils.setTime(await this.tokensale.startTime());
 
 		const expectedCoinsAmount = ethInvestment.mul(ethRate);
@@ -81,11 +68,13 @@ contract("LeapPrivatePreTokensale", function([deployer, token, placeholder, prox
 		expect(coinsAmount).to.be.bignumber.equal(expectedCoinsAmount);
 		expect(await this.tokensale.leapRaised()).to.be.bignumber.equal(expectedCoinsAmount);
 		expect(await this.tokensale.balanceOf(account)).to.be.bignumber.equal(expectedCoinsAmount);
-		expect(await this.tokensale.weiRaisedBy(investor)).to.be.bignumber.equal(ethInvestment);
+
+		const accountStruct = await this.tokensale.lockedAccounts(account);
+
+		expect(accountStruct[2]).to.be.bignumber.equal(ethInvestment);
 	});
 
 	it("should buy coins with correct btc payments", async function() {
-		await this.tokensale.addMember(investor);
 		await utils.setTime(await this.tokensale.startTime());
 
 		const expectedCoinsAmount = btcInvestment.mul(btcRate);
@@ -98,11 +87,13 @@ contract("LeapPrivatePreTokensale", function([deployer, token, placeholder, prox
 		expect(coinsAmount).to.be.bignumber.equal(expectedCoinsAmount);
 		expect(await this.tokensale.leapRaised()).to.be.bignumber.equal(expectedCoinsAmount);
 		expect(await this.tokensale.balanceOf(account)).to.be.bignumber.equal(expectedCoinsAmount);
-		expect(await this.tokensale.satoshiRaisedBy(investor)).to.be.bignumber.equal(btcInvestment);
+
+		const accountStruct = await this.tokensale.lockedAccounts(investor);
+
+		expect(accountStruct[3]).to.be.bignumber.equal(btcInvestment);
 	});
 
 	it("should fail to overlap 52.5M coins cap", async function() {
-		await this.tokensale.addMember(investor);
 		await utils.setTime(await this.tokensale.startTime());
 
 		const investment = hardcapEth.div(testingDivider);
@@ -120,7 +111,6 @@ contract("LeapPrivatePreTokensale", function([deployer, token, placeholder, prox
 	});
 
 	it("should distribute funds between two wallets equally", async function() {
-		await this.tokensale.addMember(investor);
 		await utils.setTime(await this.tokensale.startTime());
 
 		const halfOfInvestment = ethInvestment.div(2);
